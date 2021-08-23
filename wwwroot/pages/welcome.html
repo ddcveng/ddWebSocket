@@ -1,0 +1,115 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>welcome</title>
+    <script src="../js/jquery.min.js"></script>
+    <script src="../js/Chat.js"></script>
+    <link href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body{
+            margin:30px;
+            /* background-image: url("../images/background2.jpg"); */
+            background-color: blueviolet;
+        }
+        .limit-width{
+            width: 50vw;
+        }
+        .even-row {
+            display: flex;
+            justify-content: space-around;
+            vertical-align: middle;
+        }
+
+        .opposite-ends-row {
+            display: flex;
+            justify-content: space-between;
+        }
+        img {
+            border-radius: 50%;
+            -webkit-transition: -webkit-transform 0.2s ease-in-out;
+            transition: transform 0.2s ease-in-out;
+        }
+
+        img:hover {
+            -webkit-transform: rotate(90deg);
+            transform: rotate(90deg);
+        }
+
+        #dialog-choose-room {
+            width: 40vw;
+        }
+        .red {
+            color: red;
+        }
+        .white-bg {
+            background-color: white;
+            height: 73vh;
+        }
+        .fill-parent {
+            position: relative;
+            float: right;
+            margin-left: auto;
+        }
+        .full-width {
+            width: 100%;
+            height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="">
+        <div class="opposite-ends-row">
+            <div style="display:inline">
+                <h1 class="nes-text is-success nes-pointer" style="display:inline; vertical-align:middle;" id="chatroomName">Chatroom</h1><span style="display: none;" id="copyToClipboard"></span>
+                <img class="nes-avatar is-medium" src="../images/cog.png" alt="Change rooms" style="image-rendering: pixelated;" onclick="document.getElementById('dialog-choose-room').showModal();" />
+                <img class="nes-avatar is-medium" src="../images/plus.png" alt="Create or join a room" style="image-rendering: pixelated;" onclick="document.getElementById('dialog-create-join').showModal();" />
+            </div>
+            <div>
+                <button class="nes-btn is-error" onclick="getMessages()">Refresh</button>
+                <span class="nes-text is-warning nes-pointer" id="userName"></span>
+                <span style="display: none;" id="userIcon"></span>
+            </div>
+        </div>
+        <div class="opposite-ends-row">
+            <input class="nes-input" type="text" name="message" value="" id="message" placeholder="Enter message..." />
+            <button class="nes-btn is-primary" id="sendMessage">Send</button>
+        </div>
+
+        <h1 id="chatRoomName"></h1>
+        <div>
+            <section class="nes-container white-bg" style="overflow-y: scroll;">
+                <section class="message-list" id="messageList">
+                    <!-- Messages -->
+                </section>
+            </section>
+        </div>
+    </div>
+    <!-- change room -->
+    <dialog class="nes-dialog is-dark closable-dialog" id="dialog-choose-room">
+        <content>
+            <p class="nes-select">
+                <select required id="default_select">
+                    <option value="" disabled selected hidden>Select...</option>
+                </select>
+            </p>
+            <p class="even-row">
+                <button class="nes-btn is-success" id="enterRoom">Let's chat!</button>
+            </p>
+        </content>
+    </dialog>
+    <!-- create or join -->
+    <dialog class="nes-dialog is-dark closable-dialog" id="dialog-create-join">
+        <content>
+            <p>
+                <input type="text" class="nes-text" value="" placeholder="Enter room id..." id="roomToJoin"/>
+
+            </p>
+            <p class="even-row">
+                <button class="nes-btn is-success" id="joinRoom">Join  </button>
+                <a href="CreateRoom.html" class="nes-btn is-primary">Create</a>
+            </p>
+        </content>
+    </dialog>
+</body>
+</html>

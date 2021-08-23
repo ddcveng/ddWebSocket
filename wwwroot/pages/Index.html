@@ -1,0 +1,115 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>Cauko</title>
+     <!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+
+<!-- jQuery library -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+<!-- Latest compiled JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script> 
+    <!-- <script type="text/javascript" src="../js/jquery.min.js"></script> -->
+    <link href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script type="text/javascript" src="../js/LoginError.js"></script>
+    <style>
+        body {
+            background-image: url("../images/background.jpg");
+        }
+
+        .title-main {
+            font-size: 10vh;
+        }
+
+        .black {
+            color: black;
+        }
+
+        .red {
+            color: red;
+        }
+
+        .green {
+            color: green;
+        }
+
+        .yellow {
+            color: yellow;
+        }
+
+        .blue {
+            color: #6500C5;
+        }
+
+        .hotpink {
+            color: hotpink;
+        }
+
+        .title-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            min-height: 100vh;
+        }
+
+        .even-row {
+            display: flex;
+            justify-content: space-around;
+        }
+        .opposite-ends-row{
+            display: flex;
+            justify-content: space-evenly;
+        }
+    </style>
+</head>
+<body>
+    <div class="title-container">
+        <div class="title-main">
+            <span class="hotpink">Otava</span><span class="blue">216</span>
+            <!--<span class="red">Otava</span><span class="yellow">2</span><span class="blue">1</span><span class="green">6</span>-->
+        </div>
+        <button type="button" class="nes-btn is-primary" id="Enter">
+            Enter
+        </button>
+    </div>
+
+    <dialog class="nes-dialog  is-dark closable-dialog" id="dialog-default">
+        <content>
+            <h3 class="nes-text is-primary">Login or register a new account</h3>
+            <p class="nes-text is-error" id="status"></p>
+            <p>
+                <label>username:</label>
+                <input class="nes-input black" type="text" value="" id="username" />
+                <br />
+                <label>password:</label>
+                <input class="nes-input black" type="password" value="" id="password" />
+            </p>
+            <p class="even-row">
+                <button name="login" class="login nes-btn is-success">Login!</button>
+                <button name="register" class="login nes-btn is-primary">Register!</button>
+            </p>
+        </content>
+    </dialog>
+
+    <dialog class="nes-dialog is-dark closable-dialog" id="dialog-icons">
+        <content>
+            <h3 class="nes-text is-primary">Choose an Icon</h3>
+            <section class="icon-list">
+                <!-- Copyright Nintendo -->
+                <i class="nes-mario my-icon nes-pointer" id="nes-mario"></i>
+                <i class="nes-ash my-icon nes-pointer" id="nes-ash"></i>
+                <i class="nes-pokeball my-icon nes-pointer" id="nes-pokeball"></i>
+                <i class="nes-bulbasaur my-icon nes-pointer" id="nes-bulbasaur"></i>
+                <i class="nes-charmander my-icon nes-pointer" id="nes-charmander"></i>
+                <i class="nes-squirtle my-icon nes-pointer" id="nes-squirtle"></i>
+                <i class="nes-kirby my-icon nes-pointer" id="nes-kirby"></i>
+            </section>
+        </content>
+    </dialog>
+
+</body>
+</html>
