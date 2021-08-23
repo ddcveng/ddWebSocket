@@ -12,7 +12,7 @@ namespace otavaSocket
         public static ResponseData DefaultHandler(Session session, Dictionary<string, string> kwargs)
         {
             session.MessageOffset = 0;
-            return new ResponseData() { Complete = false };
+            return new ResponseData() { Status = ServerStatus.OK };
         }
 
         // POST -> api/login | username and password in form data

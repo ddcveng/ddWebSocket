@@ -11,7 +11,7 @@
         {
             WebServer server = new WebServer(WebRootDir, 5555, 300);
 
-            server.AddRoute(new Route() { Path = "welcome", Verb = "GET", Controller = new AuthorizedExpirableController(Handler.DefaultHandler) });
+            server.AddRoute(new Route() { Path = "welcome", Verb = "GET", Controller = new AuthorizedExpirableController(Handler.DefaultHandler), RequestResources=true });
             server.AddRoute(new Route() { Path = "api/chatinit", Verb = "GET", Controller = new AuthorizedExpirableController(Handler.InitializeChatroom) });
             server.AddRoute(new Route() { Path = "api/login", Verb = "POST", Controller = new AnonymousController(Handler.LoginHandler) });
             server.AddRoute(new Route() { Path = "api/createRoom", Verb = "POST", Controller = new AuthorizedExpirableController(Handler.CreateRoom) });

@@ -10,6 +10,7 @@ namespace otavaSocket
     {
         public string Verb { get; set; }
         public string Path { get; set; }
+        public bool RequestResources { get; set; }
         public BaseController Controller { get; set; }
     }
     public enum ServerStatus
@@ -32,7 +33,7 @@ namespace otavaSocket
         public string Redirect { get; set; }
     }
 
-    public class ExtensionInfo
+    public struct ExtensionInfo
     {
         public string ContentType { get; set; }
         public Func<string, string, ExtensionInfo, ResponseData> Loader { get; set; }
@@ -73,8 +74,8 @@ namespace otavaSocket
             {
                 FileStream fStream = new FileStream(filename, FileMode.Open, FileAccess.Read);
                 BinaryReader br = new BinaryReader(fStream);
-                ResponseData ret = new ResponseData() { 
-                    Data = br.ReadBytes((int)fStream.Length), 
+                ResponseData ret = new ResponseData() {
+                    Data = br.ReadBytes((int)fStream.Length),
                     ContentType = extInfo.ContentType,
                     Status = ServerStatus.OK
                 };
@@ -101,7 +102,6 @@ namespace otavaSocket
             string partialFilename = Path.GetRelativePath(_webRootPath, filename);
             filename = Path.Join(_webRootPath, "pages", partialFilename);
             return FileLoader(filename, ext, extInfo);
-
         }
 
         private ResponseData FileLoader(string filename, string ext, ExtensionInfo extInfo)
@@ -124,30 +124,19 @@ namespace otavaSocket
             return ret;
         }
 
-        public ResponseData Route(Session session, string verb, string dest, Dictionary<string, string> kwargs)
+        public ResponseData GetStaticFile(string pathToFile)
         {
             ResponseData ret;
-            int t = dest.LastIndexOf('.');
+            ExtensionInfo extInfo;
+
+            int t = pathToFile.LastIndexOf('.');
             string ext = "";
             if (t != -1)
-                ext = dest.Substring(t + 1);
-            ExtensionInfo extInfo;
-            //TODO: add protected folders
-            Route route = routes.FirstOrDefault(r => dest == r.Path && verb == r.Verb);
-            if(route != null)
-            {
-                ret = route.Controller.Handle(session, kwargs);
-                if (ret.Complete)
-                {
-                    //ajax...
-                    return ret;
-                }
-            }
+                ext = pathToFile.Substring(t + 1);
 
-            //no handler found or we still need the file data, get the requested file
             if (supportedExtensions.TryGetValue(ext, out extInfo))
             {
-                string fullpath = Path.Join(_webRootPath, dest);
+                string fullpath = Path.Join(_webRootPath, pathToFile);
                 ret = extInfo.Loader(fullpath, ext, extInfo);
             }
             else
@@ -158,31 +147,61 @@ namespace otavaSocket
             return ret;
         }
 
-        public string ErrorHandler(ServerStatus status)
+        public ResponseData Route(Session session, string verb, string dest, Dictionary<string, string> kwargs)
         {
-            string ret = @"errors";
-            switch (status)
+            ResponseData ret;
+
+            // handle registrered routes
+            int routeInx = routes.FindIndex(r => dest == r.Path && verb == r.Verb);
+            if (routeInx != -1)
+            {
+                Route route = routes[routeInx];
+                ret = route.Controller.Handle(session, kwargs);
+
+                if (ret.Status == ServerStatus.OK && route.RequestResources) {
+                    ret = GetStaticFile(dest);
+                }
+            }
+            else
+            {
+                ret = GetStaticFile(dest);
+            }
+
+            return ErrorHandler(ret);
+        }
+
+        // Will the error pages be always present?
+        // Can reading from disk fail, and if so what do I do about it?
+        public ResponseData ErrorHandler(ResponseData responseData)
+        {
+            if (responseData.Status == ServerStatus.OK) {
+                return responseData;
+            }
+
+            string path = @"errors";
+            switch (responseData.Status)
             {
                 case ServerStatus.NotFound:
-                    ret = Path.Join(ret, "NotFound.html");
+                    path = Path.Join(path, "NotFound.html");
                     break;
                 case ServerStatus.UnknownType:
-                    ret = Path.Join(ret, "UnknownType.html");
+                    path = Path.Join(path, "UnknownType.html");
                     break;
                 case ServerStatus.ServerError:
-                    ret = Path.Join(ret, "InternalError.html");
+                    path = Path.Join(path, "InternalError.html");
                     break;
                 case ServerStatus.NotAuthorized:
-                    ret = Path.Join(ret, "Unauthorized.html");
+                    path = Path.Join(path, "Unauthorized.html");
                     break;
                 case ServerStatus.ExpiredSession:
-                    ret = Path.Join(ret, "LoginTimeout.html");
+                    path = Path.Join(path, "LoginTimeout.html");
                     break;
                 default:
-                    ret = Path.Join(ret, "NotFound.html");
+                    path = Path.Join(path, "NotFound.html");
                     break;
             }
-            return ret;
+
+            return GetStaticFile(path);
         }
     }
 }

@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace otavaSocket
 {
     public class WebServer
     {
-        // Spracuváva prichádzajúce HTTP requesty 
+        // Spracuváva prichádzajúce HTTP requesty
         // Hlavný objekt programu, volá ostatné moduly
         private readonly HttpListener _listener;
         private readonly int _port;
@@ -47,6 +46,7 @@ namespace otavaSocket
             _listener.Start();
             while(_running)
             {
+               //TODO: figure out how this works
                Task listenTask = HandleRequestsAsync();
                listenTask.GetAwaiter().GetResult();
             }
@@ -59,20 +59,18 @@ namespace otavaSocket
             HttpListenerRequest request = ctx.Request;
             HttpListenerResponse response = ctx.Response;
             Log(request);
-            
             Session session = _sm.GetSession(request.RemoteEndPoint);
             string route = request.RawUrl.Substring(1).Split("?")[0];
             var kwargs = GetParams(request);
-            
 
             ResponseData resp = _router.Route(session, request.HttpMethod, route, kwargs);
-            ServerStatus err = resp.Status;
-            while (resp.Status != ServerStatus.OK)
-            {
-                err = resp.Status;
-                resp = _router.Route(session, "GET", _router.ErrorHandler(resp.Status), null);
-            }
-            resp.Status = err;
+            //ServerStatus err = resp.Status;
+            //while (resp.Status != ServerStatus.OK)
+            //{
+            //    err = resp.Status;
+            //    resp = _router.Route(session, "GET", _router.ErrorHandler(resp.Status), null);
+            //}
+            //resp.Status = err;
 
             session.UpdateLastConnectionTime();
 
