@@ -11,23 +11,23 @@ namespace otavaSocket
         // Spracuváva prichádzajúce HTTP requesty
         // Hlavný objekt programu, volá ostatné moduly
         private readonly HttpListener _listener;
-        private readonly int _port;
+        private readonly ushort _port;
         private readonly Router _router;
         private readonly bool _running = true;
         private readonly SessionManager _sm;
         public static int SessionLifetime { get; set; }
 
-        public WebServer(string webRootFolder, int port = 5555, int sessionExpireTime = 60)
+        public WebServer(string webRootFolder, ushort port = 5555, int sessionExpireTime = 60)
         {
             _port = port;
-            _listener = new HttpListener();
-            _router = new Router(webRootFolder);
-            _listener.Prefixes.Add(string.Format("http://127.0.0.1:{0}/", _port));
-            _sm = new SessionManager();
             SessionLifetime = sessionExpireTime;
+            _router = new Router(webRootFolder);
+            _sm = new SessionManager();
+            _listener = new HttpListener();
+            _listener.Prefixes.Add(string.Format("http://127.0.0.1:{0}/", _port));
         }
 
-        public void AddRoute(Route[] routes)
+        public void AddRoute(IEnumerable<Route> routes)
         {
             foreach (var route in routes)
             {
@@ -64,23 +64,20 @@ namespace otavaSocket
             var kwargs = GetParams(request);
 
             ResponseData resp = _router.Route(session, request.HttpMethod, route, kwargs);
-            //ServerStatus err = resp.Status;
-            //while (resp.Status != ServerStatus.OK)
-            //{
-            //    err = resp.Status;
-            //    resp = _router.Route(session, "GET", _router.ErrorHandler(resp.Status), null);
-            //}
-            //resp.Status = err;
 
             session.UpdateLastConnectionTime();
 
+            //TODO: How does this redirect work?
             if (string.IsNullOrEmpty(resp.Redirect))
             {
                 response.ContentType = resp.ContentType;
                 response.ContentEncoding = resp.Encoding;
                 response.ContentLength64 = resp.Data.LongLength;
                 response.StatusCode = (int)resp.Status;
-                await response.OutputStream.WriteAsync(resp.Data, 0, resp.Data.Length);
+                using (var output = response.OutputStream)
+                {
+                    await output.WriteAsync(resp.Data, 0, resp.Data.Length);
+                }
             }
             else
             {
@@ -88,7 +85,6 @@ namespace otavaSocket
                 response.Redirect("http://" + request.UserHostName + resp.Redirect);
             }
             //Send it
-            response.OutputStream.Close(); // bad -> dispose properly
             response.Close();
 
             _sm.RemoveInvalidSessions();
@@ -107,13 +103,13 @@ namespace otavaSocket
         private Dictionary<string, string> GetParams(HttpListenerRequest request)
         {
             //TODO: get/post parsing
-            var ret = new Dictionary<string, string>();
+            var kwargs = new Dictionary<string, string>();
             if (request.HttpMethod == "GET")
             {
                 var t = request.QueryString;
                 foreach (var key in t.AllKeys)
                 {
-                    ret.Add(key, t[key]);
+                    kwargs.Add(key, t[key]);
                 }
             }
             else
@@ -124,18 +120,18 @@ namespace otavaSocket
                 {
                     raw = reader.ReadToEnd();
                 }
-                if (!string.IsNullOrEmpty(raw))
+                if (raw.Length > 0)
                 {
                     Log(raw);
                     string[] pairs = raw.Split('&');
                     foreach (var pair in pairs)
                     {
                         var t = pair.Split('=');
-                        ret.Add(t[0], t[1]);
+                        kwargs.Add(t[0], t[1]);
                     }
                 }
             }
-            return ret;
+            return kwargs;
         }
     }
 }

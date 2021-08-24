@@ -49,7 +49,6 @@ namespace otavaSocket
                     {
                         Data = Encoding.UTF8.GetBytes(dataPacket.ToString()),
                         ContentType = "text/json",
-                        Complete = true,
                         Status = ServerStatus.OK,
                         Encoding = Encoding.UTF8
                     };
@@ -94,7 +93,6 @@ namespace otavaSocket
                 Encoding = Encoding.UTF8,
                 Data = Encoding.UTF8.GetBytes(dataWrapper.ToString()),
                 Status = ServerStatus.OK,
-                Complete = true
             };
         }
 
@@ -120,12 +118,10 @@ namespace otavaSocket
             {
                 session.SessionData["currentRoom"] = userChatRooms[0].ID.ToString();
             }
-                
 
             return new ResponseData()
             {
                 ContentType = "text/json",
-                Complete = true,
                 Encoding = Encoding.UTF8,
                 Status = ServerStatus.OK,
                 Data = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(userChatRooms))
@@ -153,7 +149,6 @@ namespace otavaSocket
                 Encoding = Encoding.UTF8,
                 Data = Encoding.UTF8.GetBytes(status),
                 Status = ServerStatus.OK,
-                Complete = true
             };
         }
 
@@ -174,14 +169,12 @@ namespace otavaSocket
                 ChatRoom cr = JSONFileService.GetAll<ChatRoom>().First(c => c.ID == ID);
                 ret.Data = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(cr.Messages));
                 ret.ContentType = "text/json";
-                ret.Complete = true;
                 ret.Encoding = Encoding.UTF8;
                 ret.Status = ServerStatus.OK;
             }
             else
             {
                 ret.Status = ServerStatus.UnknownType; //bad request
-                ret.Complete = true;
             }
             return ret;
         }
@@ -205,7 +198,7 @@ namespace otavaSocket
                 kwargs["id"] = currRoom;
                 return GetMessages(session, kwargs);
             }
-            return new ResponseData() { Status = ServerStatus.ServerError, Complete = true };
+            return new ResponseData() { Status = ServerStatus.ServerError };
         }
 
 
@@ -218,7 +211,6 @@ namespace otavaSocket
             return new ResponseData()
             {
                 Data = Encoding.UTF8.GetBytes(jp.ToString()),
-                Complete = true,
                 ContentType = "text/json",
                 Encoding = Encoding.UTF8,
                 Status = ServerStatus.OK
@@ -238,7 +230,6 @@ namespace otavaSocket
             }
             return new ResponseData()
             {
-                Complete = true,
                 ContentType = "text/json",
                 Encoding = Encoding.UTF8,
                 Status = status,
@@ -257,7 +248,6 @@ namespace otavaSocket
                 Data = Encoding.UTF8.GetBytes(user.ToString()),
                 Encoding = Encoding.UTF8,
                 ContentType = "text/json",
-                Complete = true,
                 Status = ServerStatus.OK
             };
         }
@@ -267,7 +257,7 @@ namespace otavaSocket
         {
             session.Valid = false;
             Console.WriteLine("lgout");
-            return new ResponseData() {Redirect = "/Index.html", Complete=true, Status=ServerStatus.OK};
+            return new ResponseData() {Redirect = "/Index.html", Status=ServerStatus.OK};
         }
     }
 }

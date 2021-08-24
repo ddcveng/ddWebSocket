@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 
 namespace otavaSocket
@@ -13,6 +12,7 @@ namespace otavaSocket
         public bool RequestResources { get; set; }
         public BaseController Controller { get; set; }
     }
+
     public enum ServerStatus
     {
         OK=200,
@@ -23,9 +23,10 @@ namespace otavaSocket
         UnknownType=400,
         Redirect=300
     }
+
     public class ResponseData
     {
-        public bool Complete { get; set; }
+        //public bool Complete { get; set; }
         public byte[] Data { get; set; }
         public string ContentType { get; set; }
         public Encoding Encoding { get; set; }
@@ -45,6 +46,7 @@ namespace otavaSocket
         private string _webRootPath;
         private Dictionary<string, ExtensionInfo> supportedExtensions;
         private List<Route> routes;
+
         public Router(string webRootPath)
         {
             _webRootPath = webRootPath;
@@ -72,15 +74,15 @@ namespace otavaSocket
         {
             if (File.Exists(filename))
             {
-                FileStream fStream = new FileStream(filename, FileMode.Open, FileAccess.Read);
+                using var fStream = new FileStream(filename, FileMode.Open, FileAccess.Read);
+                using var bReader = new BinaryReader(fStream);
+
                 BinaryReader br = new BinaryReader(fStream);
                 ResponseData ret = new ResponseData() {
                     Data = br.ReadBytes((int)fStream.Length),
                     ContentType = extInfo.ContentType,
                     Status = ServerStatus.OK
                 };
-                br.Close();
-                fStream.Close();
 
                 return ret;
             }
@@ -89,11 +91,11 @@ namespace otavaSocket
 
         private ResponseData PageLoader(string filename, string ext, ExtensionInfo extInfo)
         {
+            // toto by mohlo byt dakde v Route riesene
             if (filename == _webRootPath)
             {
                 filename = Path.Join(_webRootPath, "Index.html");
                 ext = "html";
-                //extInfo = supportedExtensions.GetValueOrDefault(ext);
             }
             else if (string.IsNullOrEmpty(ext))
             {
@@ -106,10 +108,10 @@ namespace otavaSocket
 
         private ResponseData FileLoader(string filename, string ext, ExtensionInfo extInfo)
         {
-            ResponseData ret;
+            ResponseData fileData;
             if (File.Exists(filename))
             {
-                ret = new ResponseData()
+                fileData = new ResponseData()
                 {
                     Data = File.ReadAllBytes(filename),
                     ContentType = extInfo.ContentType,
@@ -119,9 +121,9 @@ namespace otavaSocket
             }
             else
             {
-                ret = new ResponseData() { Status = ServerStatus.NotFound };
+                fileData = new ResponseData() { Status = ServerStatus.NotFound };
             }
-            return ret;
+            return fileData;
         }
 
         public ResponseData GetStaticFile(string pathToFile)
@@ -147,6 +149,7 @@ namespace otavaSocket
             return ret;
         }
 
+        //TODO / -> index.html bude route, teda route musi mat string ako RequestResource
         public ResponseData Route(Session session, string verb, string dest, Dictionary<string, string> kwargs)
         {
             ResponseData ret;

@@ -9,8 +9,8 @@ namespace otavaSocket
         public bool Authorized { get; set; }
         public DateTime LastConnection { get; set; }
         public Dictionary<string, string> SessionData { get; set; }
-        public int MessageOffset { get; set; }   
-        public bool Valid { get; set; } 
+        public int MessageOffset { get; set; } //toto je shit
+        public bool Valid { get; set; }//toto neviem ale asi tiez
 
         public Session()
         {
@@ -48,7 +48,6 @@ namespace otavaSocket
             Session session;
             if (!ActiveSessions.TryGetValue(endPoint.Address, out session))
             {
-                //return session;
                 session = new Session();
                 ActiveSessions.Add(endPoint.Address, session);
             }
@@ -57,9 +56,10 @@ namespace otavaSocket
 
         public void RemoveInvalidSessions()
         {
-            foreach (var e in ActiveSessions)
+            foreach (var (ID, session) in ActiveSessions)
             {
-                if (!e.Value.Valid) ActiveSessions.Remove(e.Key);
+                if (!session.Valid) 
+                    ActiveSessions.Remove(ID);
             }
         }
     }

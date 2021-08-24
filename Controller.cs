@@ -27,7 +27,7 @@ namespace otavaSocket
     public class AuthorizedController : BaseController
     {
         public AuthorizedController(Func<Session, Dictionary<string, string>, ResponseData> handler) : base(handler)
-        { }
+        {}
 
         public override ResponseData Handle(Session session, Dictionary<string, string> keyValuePairs)
         {
@@ -35,29 +35,26 @@ namespace otavaSocket
             {
                 return Action(session, keyValuePairs);
             }
-            else
-            {
-                return new ResponseData { Status = ServerStatus.NotAuthorized, Complete=true};
-            }
+            return new ResponseData { Status = ServerStatus.NotAuthorized };
         }
     }
 
     public class AuthorizedExpirableController : BaseController
     {
         public AuthorizedExpirableController(Func<Session, Dictionary<string, string>, ResponseData> handler) : base(handler)
-        { }
+        {}
 
         public override ResponseData Handle(Session session, Dictionary<string, string> keyValuePairs)
         {
             if (!session.Authorized)
             {
-                return new ResponseData { Status = ServerStatus.NotAuthorized, Complete = true };
+                return new ResponseData { Status = ServerStatus.NotAuthorized };
             }
             else if (session.isExpired(WebServer.SessionLifetime))
             {
                 session.Authorized = false;
                 session.SessionData.Clear();
-                return new ResponseData { Status = ServerStatus.ExpiredSession, Complete=true };
+                return new ResponseData { Status = ServerStatus.ExpiredSession };
             }
             return Action(session, keyValuePairs);
         }

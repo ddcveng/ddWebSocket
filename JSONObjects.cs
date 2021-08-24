@@ -10,6 +10,7 @@ namespace otavaSocket
         public Guid ID { get; set; }
         public List<Guid> IDList { get; set; }
     }
+
     public class User : IJSONObject
     {
         public Guid ID { get; set; }
@@ -41,7 +42,7 @@ namespace otavaSocket
         }
     }
 
-    public class JSONPacket
+    public struct JSONPacket
     {
         public string Redirect { get; set; }
         public string Data { get; set; }
@@ -53,7 +54,7 @@ namespace otavaSocket
         }
     }
 
-    public class Message
+    public struct Message
     {
         public string Sender { get; set; }
         public string Body { get; set; }

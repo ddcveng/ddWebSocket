@@ -1,11 +1,13 @@
-﻿namespace otavaSocket
+﻿using System;
+
+namespace otavaSocket
 {
     class Program
     {
-        public const string ProgramDir = @"/home/ddcveng/projects/websocket";
-        public const string UserPath = ProgramDir+@"/Data/Users.json";
-        public const string ChatRoomPath = ProgramDir+@"/Data/ChatRooms.json";
-        public const string WebRootDir = ProgramDir+@"/wwwroot";
+        public static string ProgramDir = Environment.CurrentDirectory;
+        public static string UserPath = ProgramDir+@"/Data/Users.json";
+        public static string ChatRoomPath = ProgramDir+@"/Data/ChatRooms.json";
+        public static string WebRootDir = ProgramDir+@"/wwwroot";
 
         public static void Main()
         {
