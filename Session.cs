@@ -10,25 +10,25 @@ namespace otavaSocket
         public DateTime LastConnection { get; set; }
         public Dictionary<string, string> SessionData { get; set; }
         public int MessageOffset { get; set; } //toto je shit
-        public bool Valid { get; set; }//toto neviem ale asi tiez
+
+        public static int SessionLifetime = 300;
 
         public Session()
         {
             SessionData = new Dictionary<string, string>();
             Authorized = false;
             MessageOffset = 0;
-            Valid = true;
             UpdateLastConnectionTime();
         }
- 
+
         public void UpdateLastConnectionTime()
         {
             LastConnection = DateTime.Now;
         }
 
-        public bool isExpired(int expirationTime)
+        public bool isExpired()
         {
-            return (DateTime.Now - LastConnection).TotalSeconds > expirationTime;
+            return (DateTime.Now - LastConnection).TotalSeconds > SessionLifetime;
         }
 
     }
@@ -54,13 +54,13 @@ namespace otavaSocket
             return session;
         }
 
-        public void RemoveInvalidSessions()
-        {
-            foreach (var (ID, session) in ActiveSessions)
-            {
-                if (!session.Valid) 
-                    ActiveSessions.Remove(ID);
-            }
-        }
+//        public void RemoveInvalidSessions()
+//        {
+//            foreach (var (ID, session) in ActiveSessions)
+//            {
+//                if (!session.Valid)
+//                    ActiveSessions.Remove(ID);
+//            }
+//        }
     }
 }

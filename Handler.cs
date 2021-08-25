@@ -6,14 +6,26 @@ using System.Text.Json;
 
 namespace otavaSocket
 {//TODO: make handlers async
-    class Handler
+    using Handler = Func<Session, Dictionary<string, string>, ResponseData>;
+
+    class Handlers
     {
-        //basic GET request without any post processing
-        public static ResponseData DefaultHandler(Session session, Dictionary<string, string> kwargs)
+        public static Handler GetDefaultHandler(string requestedPage)
         {
-            session.MessageOffset = 0;
-            return new ResponseData() { Status = ServerStatus.OK };
+            Handler handlerFunc = (Session s, Dictionary<string, string> kwargs) =>
+            {
+                return new ResponseData { Status = ServerStatus.OK, RequestedResource = requestedPage };
+            };
+
+            return handlerFunc;
         }
+
+        //basic GET request without any post processing
+        //public static ResponseData DefaultHandler(Session session, Dictionary<string, string> kwargs)
+        //{
+        //    session.MessageOffset = 0;
+        //    return new ResponseData() { Status = ServerStatus.OK, RequestedResource= };
+        //}
 
         // POST -> api/login | username and password in form data
         public static ResponseData LoginHandler(Session session, Dictionary<string, string> kwargs)
@@ -255,7 +267,8 @@ namespace otavaSocket
         // GET -> api/logout
         public static ResponseData Logout(Session session, Dictionary<string, string> kwargs)
         {
-            session.Valid = false;
+            //session.Valid = false;
+            session.Authorized = false;
             Console.WriteLine("lgout");
             return new ResponseData() {Redirect = "/Index.html", Status=ServerStatus.OK};
         }

@@ -9,8 +9,8 @@ namespace otavaSocket
     {
         public string Verb { get; set; }
         public string Path { get; set; }
-        public bool RequestResources { get; set; }
         public BaseController Controller { get; set; }
+        public bool NeedsResources { get; set; }
     }
 
     public enum ServerStatus
@@ -32,6 +32,7 @@ namespace otavaSocket
         public Encoding Encoding { get; set; }
         public ServerStatus Status { get; set; }
         public string Redirect { get; set; }
+        public string RequestedResource { get; set; }
     }
 
     public struct ExtensionInfo
@@ -152,29 +153,32 @@ namespace otavaSocket
         //TODO / -> index.html bude route, teda route musi mat string ako RequestResource
         public ResponseData Route(Session session, string verb, string dest, Dictionary<string, string> kwargs)
         {
-            ResponseData ret;
+            ResponseData response;
 
             // handle registrered routes
             int routeInx = routes.FindIndex(r => dest == r.Path && verb == r.Verb);
             if (routeInx != -1)
             {
                 Route route = routes[routeInx];
-                ret = route.Controller.Handle(session, kwargs);
+                response = route.Controller.Handle(session, kwargs);
 
-                if (ret.Status == ServerStatus.OK && route.RequestResources) {
-                    ret = GetStaticFile(dest);
+                if (route.NeedsResources &&
+                    response.Status == ServerStatus.OK)
+                {
+                    response = GetStaticFile(response.RequestedResource);
                 }
             }
             else
             {
-                ret = GetStaticFile(dest);
+                response = GetStaticFile(dest);
             }
 
-            return ErrorHandler(ret);
+            return ErrorHandler(response);
         }
 
         // Will the error pages be always present?
         // Can reading from disk fail, and if so what do I do about it?
+        // these can be hardcoded since they're so simple to reduce risk of errors
         public ResponseData ErrorHandler(ResponseData responseData)
         {
             if (responseData.Status == ServerStatus.OK) {

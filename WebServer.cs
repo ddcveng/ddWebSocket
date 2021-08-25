@@ -17,16 +17,15 @@ namespace otavaSocket
         private readonly SessionManager _sm;
         private readonly int maxSimultaneousConnections = 10;
         private bool _running = true;
-        public static int SessionLifetime { get; set; }
 
-        public WebServer(string webRootFolder, ushort port = 5555, int sessionExpireTime = 60)
+        public WebServer(string webRootFolder, ushort port = 5555)
         {
             _port = port;
-            SessionLifetime = sessionExpireTime;
             _router = new Router(webRootFolder);
             _sm = new SessionManager();
             _listener = new HttpListener();
-            _listener.Prefixes.Add(string.Format("http://127.0.0.1:{0}/", _port));
+            _listener.Prefixes.Add($"http://127.0.0.1:{_port}/");
+            _listener.Prefixes.Add($"http://localhost:{_port}/");
         }
 
         public void AddRoute(IEnumerable<Route> routes)
@@ -73,23 +72,19 @@ namespace otavaSocket
         {
             HttpListenerContext ctx = await _listener.GetContextAsync();
 
-            //we have a connection, release the semaphore
-            semaphore.Release();
-            //Console.WriteLine($"RELEASE: {semaphore.CurrentCount}");
-
             HttpListenerRequest request = ctx.Request;
             HttpListenerResponse response = ctx.Response;
+
             Log(request);
+
             Session session = _sm.GetSession(request.RemoteEndPoint);
+            session.UpdateLastConnectionTime();
             string route = request.RawUrl.Substring(1).Split("?")[0];
             var kwargs = GetParams(request);
 
-            //TODO: This should probably use await
             ResponseData resp = _router.Route(session, request.HttpMethod, route, kwargs);
 
-            session.UpdateLastConnectionTime();
-
-            //TODO: Use this for actual redirects and to just conditional resource
+            //TODO: Use this for actual redirects and not just conditional resource
             //      loading
             if (string.IsNullOrEmpty(resp.Redirect))
             {
@@ -99,7 +94,7 @@ namespace otavaSocket
                 response.StatusCode = (int)resp.Status;
                 using (var output = response.OutputStream)
                 {
-                    await output.WriteAsync(resp.Data, 0, resp.Data.Length);
+                    output.Write(resp.Data, 0, resp.Data.Length);
                 }
             }
             else
@@ -110,7 +105,9 @@ namespace otavaSocket
             //Send it
             response.Close();
 
-            _sm.RemoveInvalidSessions();
+            //_sm.RemoveInvalidSessions();
+            // allow another connection through
+            semaphore.Release();
         }
 
         public void Log(HttpListenerRequest req)

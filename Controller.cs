@@ -3,9 +3,11 @@ using System.Collections.Generic;
 
 namespace otavaSocket
 {
+    using Handler = Func<Session, Dictionary<string, string>, ResponseData>;
+
     public abstract class BaseController
     {
-        protected Func<Session, Dictionary<string, string>, ResponseData> Action;
+        protected Handler Action;
         public BaseController(Func<Session, Dictionary<string, string>,  ResponseData> handler)
         {
             Action = handler;
@@ -15,7 +17,7 @@ namespace otavaSocket
 
     public class AnonymousController : BaseController
     {
-        public AnonymousController(Func<Session, Dictionary<string, string>, ResponseData> handler) : base(handler)
+        public AnonymousController(Handler handler) : base(handler)
         {}
 
         public override ResponseData Handle(Session session, Dictionary<string, string> keyValuePairs)
@@ -26,7 +28,7 @@ namespace otavaSocket
 
     public class AuthorizedController : BaseController
     {
-        public AuthorizedController(Func<Session, Dictionary<string, string>, ResponseData> handler) : base(handler)
+        public AuthorizedController(Handler handler) : base(handler)
         {}
 
         public override ResponseData Handle(Session session, Dictionary<string, string> keyValuePairs)
@@ -41,7 +43,7 @@ namespace otavaSocket
 
     public class AuthorizedExpirableController : BaseController
     {
-        public AuthorizedExpirableController(Func<Session, Dictionary<string, string>, ResponseData> handler) : base(handler)
+        public AuthorizedExpirableController(Handler handler) : base(handler)
         {}
 
         public override ResponseData Handle(Session session, Dictionary<string, string> keyValuePairs)
@@ -50,7 +52,7 @@ namespace otavaSocket
             {
                 return new ResponseData { Status = ServerStatus.NotAuthorized };
             }
-            else if (session.isExpired(WebServer.SessionLifetime))
+            else if (session.isExpired())
             {
                 session.Authorized = false;
                 session.SessionData.Clear();
