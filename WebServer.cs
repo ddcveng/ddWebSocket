@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace otavaSocket
 {
@@ -13,8 +14,9 @@ namespace otavaSocket
         private readonly HttpListener _listener;
         private readonly ushort _port;
         private readonly Router _router;
-        private readonly bool _running = true;
         private readonly SessionManager _sm;
+        private readonly int maxSimultaneousConnections = 10;
+        private bool _running = true;
         public static int SessionLifetime { get; set; }
 
         public WebServer(string webRootFolder, ushort port = 5555, int sessionExpireTime = 60)
@@ -42,20 +44,39 @@ namespace otavaSocket
 
         public void Start()
         {
-            Console.WriteLine("Started http listener on port {0}", _port);
-            _listener.Start();
-            while(_running)
-            {
-               //TODO: figure out how this works
-               Task listenTask = HandleRequestsAsync();
-               listenTask.GetAwaiter().GetResult();
-            }
-            _listener.Stop();
+            Task.Run(RunServer);
+
+            Console.ReadLine();
+            Console.WriteLine("Server shutting down...");
+            _running = false;
         }
 
-        private async Task HandleRequestsAsync()
+        private void RunServer()
+        {
+            using var semaphore = new SemaphoreSlim(maxSimultaneousConnections, maxSimultaneousConnections);
+
+            _listener.Start();
+            Console.WriteLine("Started http listener on port {0}", _port);
+            Console.WriteLine("Press ENTER to end the program.");
+
+            while(_running)
+            {
+                semaphore.Wait();
+                //Console.WriteLine($"LOCK: {semaphore.CurrentCount}");
+                HandleRequestsAsync(semaphore);
+            }
+            _listener.Close();
+        }
+
+        //!!!!!! exceptions here crash the server, but should probably just fail the request;
+        private async void HandleRequestsAsync(SemaphoreSlim semaphore)
         {
             HttpListenerContext ctx = await _listener.GetContextAsync();
+
+            //we have a connection, release the semaphore
+            semaphore.Release();
+            //Console.WriteLine($"RELEASE: {semaphore.CurrentCount}");
+
             HttpListenerRequest request = ctx.Request;
             HttpListenerResponse response = ctx.Response;
             Log(request);
@@ -63,11 +84,13 @@ namespace otavaSocket
             string route = request.RawUrl.Substring(1).Split("?")[0];
             var kwargs = GetParams(request);
 
+            //TODO: This should probably use await
             ResponseData resp = _router.Route(session, request.HttpMethod, route, kwargs);
 
             session.UpdateLastConnectionTime();
 
-            //TODO: How does this redirect work?
+            //TODO: Use this for actual redirects and to just conditional resource
+            //      loading
             if (string.IsNullOrEmpty(resp.Redirect))
             {
                 response.ContentType = resp.ContentType;
