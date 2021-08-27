@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.WebSockets;
 using System.Threading.Tasks;
 using System.Threading;
 
@@ -17,8 +18,9 @@ namespace otavaSocket
         private readonly SessionManager _sm;
         private readonly int maxSimultaneousConnections = 10;
         private bool _running = true;
+        private Hub hub;
 
-        public WebServer(string webRootFolder, ushort port = 5555)
+        public WebServer(string webRootFolder, ushort port = 5555, bool useWebSockets = false)
         {
             _port = port;
             _router = new Router(webRootFolder);
@@ -26,6 +28,10 @@ namespace otavaSocket
             _listener = new HttpListener();
             _listener.Prefixes.Add($"http://127.0.0.1:{_port}/");
             _listener.Prefixes.Add($"http://localhost:{_port}/");
+            if (useWebSockets)
+            {
+                hub = new Hub();
+            }
         }
 
         public void AddRoute(IEnumerable<Route> routes)
@@ -72,38 +78,45 @@ namespace otavaSocket
         {
             HttpListenerContext ctx = await _listener.GetContextAsync();
 
-            HttpListenerRequest request = ctx.Request;
+            HttpListenerRequest  request  = ctx.Request;
             HttpListenerResponse response = ctx.Response;
-
-            Log(request);
 
             Session session = _sm.GetSession(request.RemoteEndPoint);
             session.UpdateLastConnectionTime();
-            string route = request.RawUrl.Substring(1).Split("?")[0];
-            var kwargs = GetParams(request);
+            Log(request);
 
-            ResponseData resp = _router.Route(session, request.HttpMethod, route, kwargs);
-
-            //TODO: Use this for actual redirects and not just conditional resource
-            //      loading
-            if (string.IsNullOrEmpty(resp.Redirect))
+            if (request.IsWebSocketRequest)
             {
-                response.ContentType = resp.ContentType;
-                response.ContentEncoding = resp.Encoding;
-                response.ContentLength64 = resp.Data.LongLength;
-                response.StatusCode = (int)resp.Status;
-                using (var output = response.OutputStream)
-                {
-                    output.Write(resp.Data, 0, resp.Data.Length);
-                }
+                HttpListenerWebSocketContext ws_ctx = await ctx.AcceptWebSocketAsync(subProtocol: null);
+                hub.AddClient(ws_ctx.WebSocket);
             }
             else
             {
-                response.StatusCode = (int)ServerStatus.Redirect;
-                response.Redirect("http://" + request.UserHostName + resp.Redirect);
+                string route = request.RawUrl.Substring(1).Split("?")[0];
+                var kwargs = GetParams(request);
+
+                ResponseData resp = _router.Route(session, request.HttpMethod, route, kwargs);
+
+                //TODO: Use this for actual redirects and not just conditional resource
+                //      loading
+                if (string.IsNullOrEmpty(resp.Redirect))
+                {
+                    response.ContentType = resp.ContentType;
+                    response.ContentEncoding = resp.Encoding;
+                    response.ContentLength64 = resp.Data.LongLength;
+                    response.StatusCode = (int)resp.Status;
+                    using (var output = response.OutputStream)
+                    {
+                        output.Write(resp.Data, 0, resp.Data.Length);
+                    }
+                }
+                else
+                {
+                    response.StatusCode = (int)ServerStatus.Redirect;
+                    response.Redirect("http://" + request.UserHostName + resp.Redirect);
+                }
+                response.Close();
             }
-            //Send it
-            response.Close();
 
             //_sm.RemoveInvalidSessions();
             // allow another connection through
@@ -113,6 +126,8 @@ namespace otavaSocket
         public void Log(HttpListenerRequest req)
         {
             Console.WriteLine(req.HttpMethod + " " + req.RawUrl);
+            Console.WriteLine($"is ws: {req.IsWebSocketRequest}");
+            Console.WriteLine($"headers: {req.Headers}");
         }
 
         public void Log(string text)
