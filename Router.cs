@@ -173,7 +173,10 @@ namespace otavaSocket
                 response = GetStaticFile(dest);
             }
 
-            return ErrorHandler(response);
+            ServerStatus responseStatus = response.Status;
+            response = ErrorHandler(response);
+            response.Status = responseStatus;
+            return response;
         }
 
         // Will the error pages be always present?
