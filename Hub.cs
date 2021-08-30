@@ -3,6 +3,7 @@ using System.Net.WebSockets;
 using System.Threading.Tasks;
 using System;
 using System.Threading;
+using System.Collections.Concurrent;
 
 namespace otavaSocket
 {
@@ -38,6 +39,8 @@ namespace otavaSocket
 
         public void ReleaseMemory(MemoryNode mem)
         {
+            if (mem == null)
+                return;
             mem.prev = memories;
             memories = mem;
 
@@ -50,6 +53,7 @@ namespace otavaSocket
     {
         public MemoryNode prev;
         public byte[] data;
+        public int length;
     }
 
     class MessageData
@@ -62,150 +66,128 @@ namespace otavaSocket
     {
         public WebSocket socket { get; init; }
         public int ID { get; init; }
-        public Task sendTask { get; set; }
         public Task processTask { get; set; }
-
-        public void LogMessage(ArraySegment<byte> data)
-        {
-            Console.WriteLine($"Client {ID} received {data.Count} bytes:");
-            for (int i = 0; i < data.Count; i++) {
-                Console.Write(data[i]);
-            }
-            Console.WriteLine();
-            Console.WriteLine("--");
-        }
-
-        //PROBLEMS: jasny data race s IDckom ale to je asi jedno
-        //          dajako treba vymazat disconnectnutych clientov z arrayu
-        //          a to moze byt cancer lebo zase sa to deje paralelne
-        //          mozno ich len oznacim ako dead alebo co alebo budem checkovat
-        //          ci je state open.
-        //
-        public async Task ProcessMessages(MemoryList memories, IReadOnlyList<Client> clients)
-        {
-            WebSocketMessageType messageType;
-            var mem = memories.GetMemory();
-            var buffer = new ArraySegment<byte>(mem.data);
-            do {
-                Console.WriteLine($"Client {ID} receiving...");
-                var receiveResult = await socket.ReceiveAsync(buffer, CancellationToken.None);
-                messageType = receiveResult.MessageType;
-
-                var receivedBuffer = new ArraySegment<byte>(mem.data, 0, receiveResult.Count);
-                LogMessage(receivedBuffer);
-                
-                var sendTasks = new List<Task>();
-                foreach (var client in clients)
-                {
-                    await client.sendTask;
-                    Task t = client.socket.SendAsync(
-                                receivedBuffer,
-                                WebSocketMessageType.Text,
-                                true,
-                                CancellationToken.None
-                            );
-                    sendTasks.Add(t);
-                    client.sendTask = t;
-                }
-
-                await Task.WhenAll(sendTasks);
-
-            } while (messageType != WebSocketMessageType.Close);
-
-            Console.WriteLine($"Client {ID} shutting down...");
-            memories.ReleaseMemory(mem);
-        }
     }
 
     public class Hub
     {
         private List<Client> clients;
         MemoryList memories;
-        List<Task<bool>> receiveTasks;
-        Task t;
         CancellationTokenSource cts;
+        ConcurrentQueue<MemoryNode> toSend;
         int currentID;
+        private Task sending;
 
         public Hub()
         {
             clients = new List<Client>();
             memories = new MemoryList();
-            receiveTasks = new List<Task<bool>>();
             cts = new CancellationTokenSource();
+            toSend = new ConcurrentQueue<MemoryNode>();
             currentID = 1;
+        }
+
+        public void Start()
+        {
+            sending = SendToClientsAsync();
+        }
+        public void Stop()
+        {
+            cts.Cancel();
+            sending.Wait();
+
+            int i = 0;
+            foreach (var client in clients)
+            {
+                try {
+                    client.processTask.Wait();
+                } catch (AggregateException)
+                {
+                    Console.WriteLine($"Shutdown client {i}");
+                }
+            }
         }
 
         public void AddClient(WebSocket client)
         {
             Console.WriteLine($"WS client connected! Currently connected clients: {clients.Count}");
-            Client newClient = new Client { socket=client, sendTask = Task.CompletedTask, ID = currentID};
+            Client newClient = new Client { socket=client, ID = currentID};
             clients.Add(newClient);
-            newClient.processTask = newClient.ProcessMessages(memories, clients);
+            newClient.processTask = ReceiveFromClient(newClient);
             currentID++;//bad-data race, use GUID or something
         }
 
-        public async Task ProcessClientsAsync(CancellationToken cancellationToken)
+        private static void LogMessage(MemoryNode mem)
         {
-            while (receiveTasks.Count != 0)
+            Console.WriteLine($"Received {mem.length} bytes:");
+            for (int i = 0; i < mem.length; i++) {
+                Console.Write(mem.data[i]);
+            }
+            Console.WriteLine();
+            Console.WriteLine("--");
+        }
+
+
+        // Periodically check if there are any messages to be sent
+        // TODO: Add CancellationToken somewhere so the server can shutdown
+        // cleanly
+        public async Task SendToClientsAsync()
+        {
+            while (true)
             {
-                //wait until one of the clients sends something
-                // When any doesnt notice new elements in list!!!!
-                // Solution: on every AddClient restart this method
-                //      by cancelling the task returned by WhenAny
-                //      and catching the resulting exception, breaking the loop
-                var waitTask = Task.WhenAny(receiveTasks);
-                Task<bool> finishedTask;
-                try {
-                    waitTask.Wait(cancellationToken);//wait for the whenany cancellable
-                    finishedTask = waitTask.Result;
+                MemoryNode messageData;
+                while (toSend.TryDequeue(out messageData))
+                {
+                    Console.WriteLine("got data from queue");
+                    var buffer = new ArraySegment<byte>(messageData.data, 0, messageData.length);
+                    var sendTasks = new List<Task>();
+                    foreach (var client in clients)
+                    {
+                        if (client.socket.State != WebSocketState.Open)
+                            continue;
+
+                        sendTasks.Add(client.socket.SendAsync(
+                                    buffer,
+                                    WebSocketMessageType.Text,
+                                    true,
+                                    CancellationToken.None
+                                    ));
+                    }
+                    await Task.WhenAll(sendTasks);
+                    memories.ReleaseMemory(messageData);
                 }
-                catch (OperationCanceledException) {
-                    //got new clients -> restart this method
-                    Console.WriteLine("PC: Got cancellation request, exiting..");
+                await Task.Delay(100);
+
+                if (cts.IsCancellationRequested)
                     break;
-                }
-                //var finishedTask = await Task.WhenAny(receiveTasks);
-                int connectionIndex = receiveTasks.IndexOf(finishedTask);
-                bool keepAlive = finishedTask.Result;
-                if (keepAlive) {
-                    Console.WriteLine("PC: Extending connection...");
-                    receiveTasks[connectionIndex] = ReceiveFromClient(clients[connectionIndex]);
-                }
-                else {
-                    Console.WriteLine("PC: Closing connection...");
-                    receiveTasks.RemoveAt(connectionIndex);
-                    // The client closed down the socket, so we can probably forget about it
-                    clients.RemoveAt(connectionIndex);
-                }
             }
         }
 
-        // returns false if the received message was a CLOSE, true otherwise
-        private async Task<bool> ReceiveFromClient(Client client)
+        // Receive messages from client until the connection is closed
+        // uses user defined OnReceive function to process data -- not yet implemented
+        private async Task ReceiveFromClient(Client client)
         {
-            MemoryNode mem = memories.GetMemory();
-            ArraySegment<byte> buffer = new ArraySegment<byte>(mem.data);
             var socket = client.socket;
-            var receiveResult = await socket.ReceiveAsync(buffer, CancellationToken.None);
-            Console.WriteLine($"received {receiveResult.Count} bytes with status {receiveResult.MessageType}");
-            
-            for (int i = 0; i < receiveResult.Count; i++)
+
+            while (true)
             {
-                Console.Write((char)buffer[i]);
+                MemoryNode mem = memories.GetMemory();
+                var buf = new ArraySegment<byte>(mem.data);
+                var receiveContext = await socket.ReceiveAsync(buf, cts.Token);
+                bool isMessageClose = receiveContext.MessageType == WebSocketMessageType.Close;
+
+                mem.length = receiveContext.Count;
+
+                if (isMessageClose) {
+                    Console.WriteLine("Received CLOSE -- Shutting down");
+                    break;
+                }
+                // call OnReceive -- user defined processing of the received data
+                LogMessage(mem);
+                toSend.Enqueue(mem);
             }
-            Console.WriteLine();
 
-            bool isClose = receiveResult.MessageType == WebSocketMessageType.Close;
-
-            if (!isClose) {
-                //echo the buffer back
-                var echoBuf = new ArraySegment<byte>(mem.data, 0, receiveResult.Count);
-                var msgData = new MessageData{ Sender=client, Message=echoBuf};
-                await OnReceive(msgData);
-            }
-
-            memories.ReleaseMemory(mem);
-            return !isClose;
+            clients.Remove(client);
         }
 
         private async Task OnReceive(MessageData receivedMessage)
@@ -216,24 +198,11 @@ namespace otavaSocket
                 //client.sendTask.Wait();;
                 Task t = client.socket.SendAsync(receivedMessage.Message, WebSocketMessageType.Text, true, CancellationToken.None);
                 sendTasks.Add(t);
-                client.sendTask = t;
             }
             await Task.WhenAll(sendTasks);
 
             //WebSocket sender = receivedMessage.Sender;
             //await sender.SendAsync(receivedMessage.Message, WebSocketMessageType.Text, true, CancellationToken.None);
         }
-
-        //private async Task Echo(ArraySegment<byte> buffer)
-        //{
-        //    var sendTasks = new List<Task>();
-        //    foreach (var client in clients)
-        //    {
-        //        sendTasks.Add(client.SendAsync(buffer, WebSocketMessageType.Text, false, CancellationToken.None));
-        //    }
-        //    Console.WriteLine(buffer);
-        //    await Task.WhenAll(sendTasks);
-        //}
-
     }
 }
