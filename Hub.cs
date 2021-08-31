@@ -7,67 +7,67 @@ using System.Collections.Concurrent;
 
 namespace otavaSocket
 {
-    class MemoryList
-    {
-        private static int maxMessageSize = 1024;
-        MemoryNode memories = null;
-        private int status = 0;
+    //class MemoryList
+    //{
+    //    private static int maxMessageSize = 1024;
+    //    MemoryNode memories = null;
+    //    private int status = 0;
 
-        private static MemoryNode CreateMemory()
-        {
-            MemoryNode mem = new MemoryNode();
-            mem.prev = null;
-            mem.data = new byte[maxMessageSize];
-            mem.References = 1;
+    //    private static MemoryNode CreateMemory()
+    //    {
+    //        MemoryNode mem = new MemoryNode();
+    //        mem.prev = null;
+    //        mem.data = new byte[maxMessageSize];
+    //        mem.References = 1;
 
-            return mem;
-        }
+    //        return mem;
+    //    }
 
-        public MemoryNode GetMemory()
-        {
-            if (memories == null)
-            {
-                status++;
-                Console.WriteLine("Allocating memory...");
-                return CreateMemory();
-            }
+    //    public MemoryNode GetMemory()
+    //    {
+    //        if (memories == null)
+    //        {
+    //            status++;
+    //            Console.WriteLine("Allocating memory...");
+    //            return CreateMemory();
+    //        }
 
-            MemoryNode mem = memories;
-            memories = mem.prev;
+    //        MemoryNode mem = memories;
+    //        memories = mem.prev;
 
-            return mem;
-        }
+    //        return mem;
+    //    }
 
-        public void ReleaseMemory(MemoryNode mem)
-        {
-            if (mem == null)
-                return;
+    //    public void ReleaseMemory(MemoryNode mem)
+    //    {
+    //        if (mem == null)
+    //            return;
 
-            lock (mem)
-            {
-                if (mem.References > 2)
-                {
-                    mem.References--;
-                    return;
-                }
-            }
+    //        lock (mem)
+    //        {
+    //            if (mem.References > 2)
+    //            {
+    //                mem.References--;
+    //                return;
+    //            }
+    //        }
 
-            mem.prev = memories;
-            mem.References = 1;
-            memories = mem;
+    //        mem.prev = memories;
+    //        mem.References = 1;
+    //        memories = mem;
 
-            status--;
-            Console.WriteLine("Releasing memory...");
-        }
-    }
+    //        status--;
+    //        Console.WriteLine("Releasing memory...");
+    //    }
+    //}
 
-    class MemoryNode
-    {
-        public MemoryNode prev;
-        public byte[] data;
-        public int References;
-        public int length;
-    }
+    //class MemoryNode
+    //{
+    //    public MemoryNode prev;
+    //    public byte[] data;
+    //    public int References;
+    //    public int length;
+    //}
 
     class MessageData
     {
@@ -114,7 +114,8 @@ namespace otavaSocket
                 client.sendTask.Wait();
                 try {
                     client.processTask.Wait();
-                } catch (AggregateException)
+                }
+                catch (AggregateException)
                 {
                     Console.WriteLine($"Shutdown client {i}");
                 }
@@ -167,7 +168,6 @@ namespace otavaSocket
                             cts.Token
                         );
 
-                    // TODO: this probably needs a lock to prevent data races
                     memories.ReleaseMemory(messageData);
                 }
 
@@ -199,12 +199,15 @@ namespace otavaSocket
                 }
                 // call OnReceive -- user defined processing of the received data
                 LogMessage(mem);
-                foreach (var recipient in clients)
+                // Without this lock a client could finish sending before we increment
+                // the reference count and dispose of the memory prematurely
+                lock (mem)
                 {
-                    Console.WriteLine("Enqueing message to send");
-                    //TODO: merge this into a method  on the client
-                    mem.References++;
-                    recipient.toSend.Enqueue(mem);
+                    foreach (var recipient in clients)
+                    {
+                        memories.AddReference(mem);
+                        recipient.toSend.Enqueue(mem);
+                    }
                 }
             }
 
