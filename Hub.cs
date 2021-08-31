@@ -18,6 +18,7 @@ namespace otavaSocket
             MemoryNode mem = new MemoryNode();
             mem.prev = null;
             mem.data = new byte[maxMessageSize];
+            mem.References = 1;
 
             return mem;
         }
@@ -41,7 +42,14 @@ namespace otavaSocket
         {
             if (mem == null)
                 return;
+            else if (mem.References > 2)
+            {
+                mem.References--;
+                return;
+            }
+
             mem.prev = memories;
+            mem.References = 1;
             memories = mem;
 
             status--;
@@ -53,6 +61,7 @@ namespace otavaSocket
     {
         public MemoryNode prev;
         public byte[] data;
+        public int References;
         public int length;
     }
 
@@ -67,6 +76,8 @@ namespace otavaSocket
         public WebSocket socket { get; init; }
         public int ID { get; init; }
         public Task processTask { get; set; }
+        public Task sendTask {get; set;}
+        public ConcurrentQueue<MemoryNode> toSend { get; set; }
     }
 
     public class Hub
@@ -76,7 +87,6 @@ namespace otavaSocket
         CancellationTokenSource cts;
         ConcurrentQueue<MemoryNode> toSend;
         int currentID;
-        private Task sending;
 
         public Hub()
         {
@@ -87,33 +97,37 @@ namespace otavaSocket
             currentID = 1;
         }
 
-        public void Start()
-        {
-            sending = SendToClientsAsync();
-        }
         public void Stop()
         {
             cts.Cancel();
-            sending.Wait();
 
             int i = 0;
             foreach (var client in clients)
             {
+                // WebSocket.SendAsync doesnt throw any exceptions
+                // according to the docs
+                // I dont really believe it so beware
+                client.sendTask.Wait();
                 try {
                     client.processTask.Wait();
                 } catch (AggregateException)
                 {
                     Console.WriteLine($"Shutdown client {i}");
                 }
+                i++;
             }
         }
 
         public void AddClient(WebSocket client)
         {
-            Console.WriteLine($"WS client connected! Currently connected clients: {clients.Count}");
-            Client newClient = new Client { socket=client, ID = currentID};
+            Client newClient = new Client { socket=client,
+                ID = currentID,
+                toSend = new ConcurrentQueue<MemoryNode>()
+            };
             clients.Add(newClient);
-            newClient.processTask = ReceiveFromClient(newClient);
+            Console.WriteLine($"WS client connected! Currently connected clients: {clients.Count}");
+            newClient.processTask = ReceiveFromClientAsync(newClient);
+            newClient.sendTask    = SendToClientAsync(newClient);
             currentID++;//bad-data race, use GUID or something
         }
 
@@ -127,45 +141,42 @@ namespace otavaSocket
             Console.WriteLine("--");
         }
 
-
-        // Periodically check if there are any messages to be sent
-        // TODO: Add CancellationToken somewhere so the server can shutdown
-        // cleanly
-        public async Task SendToClientsAsync()
+        private async Task SendToClientAsync(Client client)
         {
             while (true)
             {
                 MemoryNode messageData;
-                while (toSend.TryDequeue(out messageData))
+                while (client.toSend.TryDequeue(out messageData))
                 {
-                    Console.WriteLine("got data from queue");
-                    var buffer = new ArraySegment<byte>(messageData.data, 0, messageData.length);
-                    var sendTasks = new List<Task>();
-                    foreach (var client in clients)
-                    {
-                        if (client.socket.State != WebSocketState.Open)
-                            continue;
+                    Console.WriteLine("dequeued message");
+                    var buf = new ArraySegment<byte>(messageData.data, 0, messageData.length);
 
-                        sendTasks.Add(client.socket.SendAsync(
-                                    buffer,
-                                    WebSocketMessageType.Text,
-                                    true,
-                                    CancellationToken.None
-                                    ));
+                    if (client.socket.State != WebSocketState.Open) {
+                        Console.WriteLine("socket was closed");
+                        break;
                     }
-                    await Task.WhenAll(sendTasks);
+
+                    await client.socket.SendAsync(
+                            buf,
+                            WebSocketMessageType.Text,
+                            endOfMessage: true,
+                            cts.Token
+                        );
+
+                    // TODO: this probably needs a lock to prevent data races
                     memories.ReleaseMemory(messageData);
                 }
-                await Task.Delay(100);
 
-                if (cts.IsCancellationRequested)
+                await Task.Delay(150);
+                if (cts.IsCancellationRequested) {
                     break;
+                }
             }
         }
 
         // Receive messages from client until the connection is closed
         // uses user defined OnReceive function to process data -- not yet implemented
-        private async Task ReceiveFromClient(Client client)
+        private async Task ReceiveFromClientAsync(Client client)
         {
             var socket = client.socket;
 
@@ -184,10 +195,16 @@ namespace otavaSocket
                 }
                 // call OnReceive -- user defined processing of the received data
                 LogMessage(mem);
-                toSend.Enqueue(mem);
+                foreach (var recipient in clients)
+                {
+                    Console.WriteLine("Enqueing message to send");
+                    //TODO: merge this into a method  on the client
+                    mem.References++;
+                    recipient.toSend.Enqueue(mem);
+                }
             }
 
-            clients.Remove(client);
+            //clients.Remove(client);
         }
 
         private async Task OnReceive(MessageData receivedMessage)

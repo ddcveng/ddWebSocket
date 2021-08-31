@@ -50,7 +50,6 @@ namespace otavaSocket
         public void Start()
         {
             Task.Run(RunServer);
-            hub.Start();
 
             Console.ReadLine();
             Console.WriteLine("Server shutting down...");
