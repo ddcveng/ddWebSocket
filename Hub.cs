@@ -42,10 +42,14 @@ namespace otavaSocket
         {
             if (mem == null)
                 return;
-            else if (mem.References > 2)
+
+            lock (mem)
             {
-                mem.References--;
-                return;
+                if (mem.References > 2)
+                {
+                    mem.References--;
+                    return;
+                }
             }
 
             mem.prev = memories;
