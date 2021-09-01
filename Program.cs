@@ -1,7 +1,21 @@
 ﻿using System;
+using System.Text;
 
 namespace otavaSocket
 {
+    class ChatHub : Hub
+    {
+        protected override void OnReceive(MemoryNode message, Session session)
+        {
+            string added = "AAAA";
+            Encoding.ASCII.GetBytes(added, 0, added.Length, message.data, message.length);
+            //for (int i = 0; i < added.Length; i++)
+            //{
+            //    message.data[message.length+i] = (byte)added[i];
+            //}
+            message.length += added.Length;
+        }
+    }
     class Program
     {
         public static string ProgramDir = Environment.CurrentDirectory;
@@ -12,7 +26,8 @@ namespace otavaSocket
         public static void Main()
         {
             Session.SessionLifetime = 300;
-            WebServer server = new WebServer(WebRootDir, 5555, true);
+            WebServer server = new WebServer(WebRootDir, 5555);
+            server.UseWebSockets<ChatHub>();
 
             server.AddRoute(new Route { Path = "welcome", Verb = "GET", Controller = new AuthorizedExpirableController(Handlers.GetDefaultHandler("welcome.html")), NeedsResources=true });
             server.AddRoute(new Route { Path = "api/chatinit", Verb = "GET", Controller = new AuthorizedExpirableController(Handlers.InitializeChatroom) });

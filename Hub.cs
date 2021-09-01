@@ -7,81 +7,13 @@ using System.Collections.Concurrent;
 
 namespace otavaSocket
 {
-    //class MemoryList
-    //{
-    //    private static int maxMessageSize = 1024;
-    //    MemoryNode memories = null;
-    //    private int status = 0;
-
-    //    private static MemoryNode CreateMemory()
-    //    {
-    //        MemoryNode mem = new MemoryNode();
-    //        mem.prev = null;
-    //        mem.data = new byte[maxMessageSize];
-    //        mem.References = 1;
-
-    //        return mem;
-    //    }
-
-    //    public MemoryNode GetMemory()
-    //    {
-    //        if (memories == null)
-    //        {
-    //            status++;
-    //            Console.WriteLine("Allocating memory...");
-    //            return CreateMemory();
-    //        }
-
-    //        MemoryNode mem = memories;
-    //        memories = mem.prev;
-
-    //        return mem;
-    //    }
-
-    //    public void ReleaseMemory(MemoryNode mem)
-    //    {
-    //        if (mem == null)
-    //            return;
-
-    //        lock (mem)
-    //        {
-    //            if (mem.References > 2)
-    //            {
-    //                mem.References--;
-    //                return;
-    //            }
-    //        }
-
-    //        mem.prev = memories;
-    //        mem.References = 1;
-    //        memories = mem;
-
-    //        status--;
-    //        Console.WriteLine("Releasing memory...");
-    //    }
-    //}
-
-    //class MemoryNode
-    //{
-    //    public MemoryNode prev;
-    //    public byte[] data;
-    //    public int References;
-    //    public int length;
-    //}
-
-    class MessageData
-    {
-        public Client Sender { get; init; }
-        public ArraySegment<byte> Message { get; init; }
-    }
-
     class Client
     {
         public WebSocket socket { get; init; }
-        public int ID { get; init; }
+        public Session session { get; init; }
         public Task processTask { get; set; }
         public Task sendTask {get; set;}
-        public ConcurrentQueue<MemoryNode> toSend { get; set; }
+        public ConcurrentQueue<MemoryNode> toSend { get; init; }
     }
 
     public class Hub
@@ -123,10 +55,10 @@ namespace otavaSocket
             }
         }
 
-        public void AddClient(WebSocket client)
+        public void AddClient(WebSocket client, Session session)
         {
             Client newClient = new Client { socket=client,
-                ID = currentID,
+                session = session,
                 toSend = new ConcurrentQueue<MemoryNode>()
             };
             clients.Add(newClient);
@@ -140,7 +72,7 @@ namespace otavaSocket
         {
             Console.WriteLine($"Received {mem.length} bytes:");
             for (int i = 0; i < mem.length; i++) {
-                Console.Write(mem.data[i]);
+                Console.Write((char)mem.data[i]);
             }
             Console.WriteLine();
             Console.WriteLine("--");
@@ -199,6 +131,7 @@ namespace otavaSocket
                 }
                 // call OnReceive -- user defined processing of the received data
                 LogMessage(mem);
+                OnReceive(mem, client.session);
                 // Without this lock a client could finish sending before we increment
                 // the reference count and dispose of the memory prematurely
                 lock (mem)
@@ -214,19 +147,8 @@ namespace otavaSocket
             //clients.Remove(client);
         }
 
-        private async Task OnReceive(MessageData receivedMessage)
+        protected virtual void OnReceive(MemoryNode message, Session session)
         {
-            var sendTasks = new List<Task>();
-            foreach (var client in clients)
-            {
-                //client.sendTask.Wait();;
-                Task t = client.socket.SendAsync(receivedMessage.Message, WebSocketMessageType.Text, true, CancellationToken.None);
-                sendTasks.Add(t);
-            }
-            await Task.WhenAll(sendTasks);
-
-            //WebSocket sender = receivedMessage.Sender;
-            //await sender.SendAsync(receivedMessage.Message, WebSocketMessageType.Text, true, CancellationToken.None);
         }
     }
 }

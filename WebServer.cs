@@ -18,9 +18,10 @@ namespace otavaSocket
         private readonly SessionManager _sm;
         private readonly int maxSimultaneousConnections = 10;
         private bool _running = true;
+        private bool useWebSockets = false;
         private Hub hub;
 
-        public WebServer(string webRootFolder, ushort port = 5555, bool useWebSockets = false)
+        public WebServer(string webRootFolder, ushort port = 5555)
         {
             _port = port;
             _router = new Router(webRootFolder);
@@ -28,10 +29,6 @@ namespace otavaSocket
             _listener = new HttpListener();
             _listener.Prefixes.Add($"http://127.0.0.1:{_port}/");
             _listener.Prefixes.Add($"http://localhost:{_port}/");
-            if (useWebSockets)
-            {
-                hub = new Hub();
-            }
         }
 
         public void AddRoute(IEnumerable<Route> routes)
@@ -45,6 +42,12 @@ namespace otavaSocket
         public void AddRoute(Route route)
         {
             _router.AddRoute(route);
+        }
+
+        public void UseWebSockets<T>() where T : Hub, new()
+        {
+            hub = new T();
+            useWebSockets = true;
         }
 
         public void Start()
@@ -86,10 +89,10 @@ namespace otavaSocket
             session.UpdateLastConnectionTime();
             Log(request);
 
-            if (request.IsWebSocketRequest)
+            if (useWebSockets && request.IsWebSocketRequest)
             {
                 HttpListenerWebSocketContext ws_ctx = await ctx.AcceptWebSocketAsync(subProtocol: null);
-                hub.AddClient(ws_ctx.WebSocket);
+                hub.AddClient(ws_ctx.WebSocket, session);
             }
             else
             {

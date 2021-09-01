@@ -2,7 +2,7 @@ using System;
 
 namespace otavaSocket
 {
-    class MemoryNode
+    public class MemoryNode
     {
         public MemoryNode prev;
         public byte[] data;
