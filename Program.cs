@@ -7,7 +7,9 @@ namespace otavaSocket
     {
         protected override void OnReceive(MemoryNode message, Session session)
         {
-            string added = "AAAA";
+            string username;
+            session.SessionData.TryGetValue("username", out username);
+            string added = $" {username}";
             Encoding.ASCII.GetBytes(added, 0, added.Length, message.data, message.length);
             //for (int i = 0; i < added.Length; i++)
             //{
@@ -29,6 +31,7 @@ namespace otavaSocket
             WebServer server = new WebServer(WebRootDir, 5555);
             server.UseWebSockets<ChatHub>();
 
+            server.AddRoute(new Route { Path = "startchat", Verb = "POST", Controller= new AnonymousController(Handlers.startchat)});
             server.AddRoute(new Route { Path = "welcome", Verb = "GET", Controller = new AuthorizedExpirableController(Handlers.GetDefaultHandler("welcome.html")), NeedsResources=true });
             server.AddRoute(new Route { Path = "api/chatinit", Verb = "GET", Controller = new AuthorizedExpirableController(Handlers.InitializeChatroom) });
             server.AddRoute(new Route { Path = "api/login", Verb = "POST", Controller = new AnonymousController(Handlers.LoginHandler) });

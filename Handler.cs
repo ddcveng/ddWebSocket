@@ -20,6 +20,12 @@ namespace otavaSocket
             return handlerFunc;
         }
 
+        public static ResponseData startchat(Session session, Dictionary<string, string> kwargs)
+        {
+            session.SessionData.Add("username", kwargs["user"]);
+            return new ResponseData { Status = ServerStatus.OK, Data= new byte[5]};
+        }
+
         //basic GET request without any post processing
         //public static ResponseData DefaultHandler(Session session, Dictionary<string, string> kwargs)
         //{
