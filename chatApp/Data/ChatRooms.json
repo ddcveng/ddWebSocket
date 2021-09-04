@@ -1,0 +1,150 @@
+[
+  {
+    "ID": "1c2ba615-b61c-45d3-8923-49a699caee1e",
+    "Name": "test1",
+    "UserIDs": [
+      "0d62d471-5f15-45c7-8acf-c070d94ccaca",
+      "d9153ffe-5c2f-461d-97a3-6286543a4703"
+    ],
+    "Messages": [
+      {
+        "Sender": "dd",
+        "Body": "cau test1",
+        "TimeSent": "2021-09-03T11:40:20.9545772+02:00"
+      },
+      {
+        "Sender": "kiki",
+        "Body": "tu kiki test1",
+        "TimeSent": "2021-09-03T11:45:51.4836923+02:00"
+      },
+      {
+        "Sender": "dd",
+        "Body": "cau kiki",
+        "TimeSent": "2021-09-03T11:46:22.1096728+02:00"
+      },
+      {
+        "Sender": "kiki",
+        "Body": "cau dede",
+        "TimeSent": "2021-09-03T11:46:33.0348119+02:00"
+      }
+    ]
+  },
+  {
+    "ID": "76f90074-45a1-4202-9a15-8037f8ddeb4c",
+    "Name": "test2",
+    "UserIDs": [
+      "0d62d471-5f15-45c7-8acf-c070d94ccaca",
+      "d9153ffe-5c2f-461d-97a3-6286543a4703"
+    ],
+    "Messages": [
+      {
+        "Sender": "dd",
+        "Body": "cau test2",
+        "TimeSent": "2021-09-03T11:45:23.6093614+02:00"
+      }
+    ]
+  },
+  {
+    "ID": "f49c290c-3442-4050-b269-96b0ffb3be4d",
+    "Name": "test3",
+    "UserIDs": [
+      "0d62d471-5f15-45c7-8acf-c070d94ccaca",
+      "d9153ffe-5c2f-461d-97a3-6286543a4703"
+    ],
+    "Messages": []
+  },
+  {
+    "ID": "f8d37451-f7ed-4f59-a659-27974cdeabfd",
+    "Name": "test4",
+    "UserIDs": [
+      "0d62d471-5f15-45c7-8acf-c070d94ccaca",
+      "d9153ffe-5c2f-461d-97a3-6286543a4703"
+    ],
+    "Messages": [
+      {
+        "Sender": "dd",
+        "Body": "je tu niekto?",
+        "TimeSent": "2021-09-03T15:05:44.038628+02:00"
+      },
+      {
+        "Sender": "kiki",
+        "Body": "cau ja som tu kiki",
+        "TimeSent": "2021-09-03T15:05:57.2482985+02:00"
+      },
+      {
+        "Sender": "dd",
+        "Body": "cau, ako sa mas?",
+        "TimeSent": "2021-09-03T15:06:14.1841207+02:00"
+      },
+      {
+        "Sender": "kiki",
+        "Body": "vyborne, a ty?",
+        "TimeSent": "2021-09-03T15:06:25.758774+02:00"
+      },
+      {
+        "Sender": "dd",
+        "Body": "pohode",
+        "TimeSent": "2021-09-03T15:06:32.1545131+02:00"
+      }
+    ]
+  },
+  {
+    "ID": "373972db-237d-4bf8-904c-fd0c69fd890b",
+    "Name": "test5",
+    "UserIDs": [
+      "0d62d471-5f15-45c7-8acf-c070d94ccaca",
+      "d9153ffe-5c2f-461d-97a3-6286543a4703"
+    ],
+    "Messages": []
+  },
+  {
+    "ID": "bf4d9b1f-ee9e-49a1-866d-41493e49230c",
+    "Name": "test6",
+    "UserIDs": [
+      "0d62d471-5f15-45c7-8acf-c070d94ccaca",
+      "d9153ffe-5c2f-461d-97a3-6286543a4703"
+    ],
+    "Messages": [
+      {
+        "Sender": "kiki",
+        "Body": "test6 od kiki",
+        "TimeSent": "2021-09-03T12:03:35.314914+02:00"
+      },
+      {
+        "Sender": "dd",
+        "Body": "ta co?",
+        "TimeSent": "2021-09-03T12:03:47.4669646+02:00"
+      },
+      {
+        "Sender": "kiki",
+        "Body": "tu kiki",
+        "TimeSent": "2021-09-03T12:04:04.1008099+02:00"
+      }
+    ]
+  },
+  {
+    "ID": "2bc2d056-5b7f-4d51-b6c1-80c90e9ebbb9",
+    "Name": "kvet",
+    "UserIDs": [
+      "7f6005d4-db60-4451-b489-96f92ec3b93e",
+      "d9153ffe-5c2f-461d-97a3-6286543a4703"
+    ],
+    "Messages": [
+      {
+        "Sender": "dusty",
+        "Body": "manu mnau",
+        "TimeSent": "2021-09-03T21:25:02.6679151+02:00"
+      },
+      {
+        "Sender": "kiki",
+        "Body": "ahoj mnau",
+        "TimeSent": "2021-09-03T21:26:07.3355073+02:00"
+      },
+      {
+        "Sender": "dusty",
+        "Body": "cau",
+        "TimeSent": "2021-09-03T21:26:22.7239182+02:00"
+      }
+    ]
+  }
+]

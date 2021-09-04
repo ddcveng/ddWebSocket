@@ -19,13 +19,11 @@ namespace otavaSocket
         public string DateCreated { get; set; }
         [JsonPropertyName("ChatRoomIDs")]
         public List<Guid> IDList { get; set; }
-        public string Icon { get; set; }
 
         public User()
         {
             ID = Guid.NewGuid();
             IDList = new List<Guid>();
-            Icon = null;
         }
 
         public void Add(Guid chatRoomID)
@@ -58,7 +56,6 @@ namespace otavaSocket
     {
         public string Sender { get; set; }
         public string Body { get; set; }
-        public string Icon { get; set; }
         public DateTime TimeSent { get; set; }
     }
 
@@ -112,6 +109,4 @@ namespace otavaSocket
             return JsonSerializer.Serialize(this);
         }
     }
-
-
 }

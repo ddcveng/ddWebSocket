@@ -8,19 +8,28 @@
     #output span.error { color: red; }
 </style>
 <h2>WebSocket Test</h2>
-Username:
-<textarea id=username></textarea>
+<h3 id="uname"></h3>
 Message:
 <textarea id=message cols=60 rows=6></textarea>
 <button>send</button>
 <div id=output></div>
 <script>
-    // http://www.websocket.org/echo.html
+    $.ajax({
+        type: "GET",
+        url: "/getuser",
+        data: null,
+        success: function(response) {
+                document.getElementById("uname").innerHTML = response;
+                },
+        error: function(response) {
+                $("#uname").text(response);
+            }
+    });
 
     var button = document.querySelector("button"),
         output = document.querySelector("#output"),
         message = document.querySelector("#message"),
-        username = document.querySelector("#username"),
+        username = document.querySelector("#uname"),
         // wsUri = "ws://echo.websocket.org/",
         wsUri = "ws://127.0.0.1:5555/",
         websocket = new WebSocket(wsUri);
@@ -29,16 +38,6 @@ Message:
 
     websocket.onopen = function (e) {
         writeToScreen("CONNECTED");
-        var packet = { user: username.value};
-        $.ajax({
-                type: "POST",
-                url: "startchat",
-                data: packet,
-                success: function(response) {},
-                error: function(response) {
-                        console.log(response);
-                    }
-            });
     };
 
     websocket.onclose = function (e) {
@@ -54,7 +53,7 @@ Message:
     };
 
     function doSend(message) {
-        writeToScreen(username.value + ": " + message);
+        //writeToScreen(message);
         websocket.send(message);
     }
 
@@ -63,10 +62,10 @@ Message:
     }
 
     function onClickButton() {
-        var text = message.value;
+        var text = username.textContent + ": " + message.value;
 
         text && doSend(text);
-        textarea.value = "";
-        textarea.focus();
+        message.value = "";
+        message.focus();
     }
 </script>

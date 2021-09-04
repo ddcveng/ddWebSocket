@@ -5,6 +5,14 @@ namespace otavaSocket
 {
     using Handler = Func<Session, Dictionary<string, string>, ResponseData>;
 
+    /// Base class for all controllers
+    /**
+     * A controller contains a Handler delegate, which is user defined
+     * and called in the Handle method.
+     *
+     * The Handle method is overridden by concrete Controllers to provide
+     * access control and choose when the Handler delegate should be called.
+     */
     public abstract class BaseController
     {
         protected Handler Action;
@@ -15,6 +23,7 @@ namespace otavaSocket
         public abstract ResponseData Handle(Session session, Dictionary<string, string> keyValuePairs);
     }
 
+    /// Basic concrete controller that allows everyone to see the resource
     public class AnonymousController : BaseController
     {
         public AnonymousController(Handler handler) : base(handler)
@@ -26,6 +35,7 @@ namespace otavaSocket
         }
     }
 
+    /// Concrete controller requiring Authorization
     public class AuthorizedController : BaseController
     {
         public AuthorizedController(Handler handler) : base(handler)
@@ -41,6 +51,8 @@ namespace otavaSocket
         }
     }
 
+    /// Concrete controller requiring the session is not expired in addition
+    /// to authorization
     public class AuthorizedExpirableController : BaseController
     {
         public AuthorizedExpirableController(Handler handler) : base(handler)

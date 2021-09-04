@@ -31,13 +31,13 @@ namespace otavaSocket
             using (FileStream fs = File.Open(fileMap[typeof(T)], FileMode.Open, FileAccess.ReadWrite))
             {
                 using var sw = new StreamWriter(fs);
-                fs.Seek(-1, SeekOrigin.End);
+                fs.Seek(-2, SeekOrigin.End);
                 if (fs.Length > 5)// [ ] CR LF EOF
                 {
                     await sw.WriteAsync(',');
                 }
                 await sw.WriteAsync(newObj.ToString());
-                await sw.WriteAsync("]");
+                await sw.WriteAsync("]\n");
             }
         }
 
@@ -56,7 +56,6 @@ namespace otavaSocket
         {
             var current = GetAll<User>();
             User u = current.First(r => r.ID == objID);
-            u.Icon = icon;
             File.WriteAllText(fileMap[typeof(User)], JsonSerializer.Serialize(current, new JsonSerializerOptions()
             {
                 WriteIndented = true

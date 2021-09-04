@@ -8,10 +8,14 @@ using System.Threading;
 
 namespace otavaSocket
 {
+    /// The main webserver object
+    /**
+     *  Create an instance of this class
+     *  and call the Start() method to
+     *  start the server
+     */
     public class WebServer
     {
-        // Spracuváva prichádzajúce HTTP requesty
-        // Hlavný objekt programu, volá ostatné moduly
         private readonly HttpListener _listener;
         private readonly ushort _port;
         private readonly Router _router;
@@ -21,16 +25,21 @@ namespace otavaSocket
         private bool useWebSockets = false;
         private Hub hub;
 
+        /// Initialize a webserver with the given parameters
+        /**
+         * @param port The port number to start the server on
+         * @param webRootFolder Path to the folder containing hosted data
+         */
         public WebServer(string webRootFolder, ushort port = 5555)
         {
             _port = port;
             _router = new Router(webRootFolder);
             _sm = new SessionManager();
             _listener = new HttpListener();
-            _listener.Prefixes.Add($"http://127.0.0.1:{_port}/");
-            _listener.Prefixes.Add($"http://localhost:{_port}/");
+            _listener.Prefixes.Add($"http://*:{_port}/");
         }
 
+        /// Register multiple routes
         public void AddRoute(IEnumerable<Route> routes)
         {
             foreach (var route in routes)
@@ -39,45 +48,80 @@ namespace otavaSocket
             }
         }
 
+        /// Register a route
+        /**
+         * Configure a Route object and then
+         * call this method on it to activate it on the server
+         *
+         * @param route The route object to register
+         */
         public void AddRoute(Route route)
         {
             _router.AddRoute(route);
         }
 
+        /// Activate WebSocket use on the server
+        /*
+         * @tparam T Hub implementation to use for WebSocket communication
+         */
         public void UseWebSockets<T>() where T : Hub, new()
         {
             hub = new T();
             useWebSockets = true;
         }
 
+        /// Start the server
         public void Start()
         {
-            Task.Run(RunServer);
-
-            Console.ReadLine();
-            Console.WriteLine("Server shutting down...");
-            _running = false;
-            hub.Stop();
-        }
-
-        private void RunServer()
-        {
-            using var semaphore = new SemaphoreSlim(maxSimultaneousConnections, maxSimultaneousConnections);
-
             _listener.Start();
             Console.WriteLine("Started http listener on port {0}", _port);
-            Console.WriteLine("Press ENTER to end the program.");
+
+            Task.Factory.StartNew(RunServerAsync);
+        }
+
+        /// Stop the server
+        /**
+         * Blocks until all the tasks have finished, which may be never
+         * because I sadly can't cancel them properly.
+         */
+        public void Stop()
+        {
+            _running = false;
+            _listener.Close();
+            hub.Stop().Wait();
+        }
+
+        /// Start and infinite loop to handle connections
+        /**
+         * Start maxSimultaneousConnections connections in parallel
+         * using a semaphore to regulate their number
+         */
+        private void RunServerAsync()
+        {
+
+            SemaphoreSlim semaphore = new SemaphoreSlim(maxSimultaneousConnections, maxSimultaneousConnections);
 
             while(_running)
             {
                 semaphore.Wait();
-                //Console.WriteLine($"LOCK: {semaphore.CurrentCount}");
                 HandleRequestsAsync(semaphore);
             }
-            _listener.Close();
+            //_listener.Close();
+            //await Task.WhenAll(tasks);;
+            //await hub.Stop();
         }
 
-        //!!!!!! exceptions here crash the server, but should probably just fail the request;
+        /// Accept a HTTP request and respond to it accordingly
+        /**
+         * If the HTTP request was a WebSocket upgrade, completes it
+         * and sends the WebSocket to the hub.
+         *
+         * Otherwise asks the Router for a response and sends it back to the
+         * client.
+         *
+         * In the end, always releases 1 spot on the semaphore
+         * @param semaphore The semaphore to release on
+         */
         private async void HandleRequestsAsync(SemaphoreSlim semaphore)
         {
             HttpListenerContext ctx = await _listener.GetContextAsync();
@@ -92,17 +136,22 @@ namespace otavaSocket
             if (useWebSockets && request.IsWebSocketRequest)
             {
                 HttpListenerWebSocketContext ws_ctx = await ctx.AcceptWebSocketAsync(subProtocol: null);
-                hub.AddClient(ws_ctx.WebSocket, session);
+                lock (session)
+                {
+                    hub.AddClient(ws_ctx.WebSocket, session);
+                }
             }
             else
             {
                 string route = request.RawUrl.Substring(1).Split("?")[0];
                 var kwargs = GetParams(request);
 
-                ResponseData resp = _router.Route(session, request.HttpMethod, route, kwargs);
+                ResponseData resp;
+                lock (session)
+                {
+                    resp = _router.Route(session, request.HttpMethod, route, kwargs);
+                }
 
-                //TODO: Use this for actual redirects and not just conditional resource
-                //      loading
                 if (string.IsNullOrEmpty(resp.Redirect))
                 {
                     response.ContentType = resp.ContentType;
@@ -127,18 +176,24 @@ namespace otavaSocket
             semaphore.Release();
         }
 
-        public void Log(HttpListenerRequest req)
+        /// Helper function for printing out the request
+        private void Log(HttpListenerRequest req)
         {
             Console.WriteLine(req.HttpMethod + " " + req.RawUrl);
-            Console.WriteLine($"is ws: {req.IsWebSocketRequest}");
-            Console.WriteLine($"headers: {req.Headers}");
+            //Console.WriteLine($"is ws: {req.IsWebSocketRequest}");
+            //Console.WriteLine($"headers: {req.Headers}");
         }
 
-        public void Log(string text)
+        private void Log(string text)
         {
             Console.WriteLine(text);
         }
 
+        /// Helper function for parsing data from the browser
+        /**
+         * Parses key-value pairs from a GET request's query or a
+         * POST request form into a C# Dictionary<string, string>.
+         */
         private Dictionary<string, string> GetParams(HttpListenerRequest request)
         {
             //TODO: get/post parsing

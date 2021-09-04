@@ -8,6 +8,27 @@ namespace otavaSocket
 {//TODO: make handlers async
     using Handler = Func<Session, Dictionary<string, string>, ResponseData>;
 
+    class ChatHub : Hub
+    {
+        protected override string OnReceive(string message, Session session, string senderID)
+        {
+            string currRoom;
+            if (session.SessionData.TryGetValue("currentRoom", out currRoom))
+            {
+                Console.WriteLine("bol currentRoom");
+                Message messagePacket = new Message()
+                {
+                    Sender = senderID,
+                    Body = message,
+                    TimeSent = DateTime.Now,
+                };
+                JSONFileService.Update(Guid.Parse(currRoom), messagePacket);
+                return JsonSerializer.Serialize(messagePacket);
+            }
+            return "hovno";
+        }
+    }
+
     class Handlers
     {
         public static Handler GetDefaultHandler(string requestedPage)
@@ -22,16 +43,20 @@ namespace otavaSocket
 
         public static ResponseData startchat(Session session, Dictionary<string, string> kwargs)
         {
+            Console.WriteLine($"doslo: {kwargs["user"]}");
             session.SessionData.Add("username", kwargs["user"]);
-            return new ResponseData { Status = ServerStatus.OK, Data= new byte[5]};
+            return new ResponseData { Status = ServerStatus.OK, RequestedResource="chat.html"};
         }
 
-        //basic GET request without any post processing
-        //public static ResponseData DefaultHandler(Session session, Dictionary<string, string> kwargs)
-        //{
-        //    session.MessageOffset = 0;
-        //    return new ResponseData() { Status = ServerStatus.OK, RequestedResource= };
-        //}
+        public static ResponseData getUserName(Session session, Dictionary<string, string> kwargs)
+        {
+            string username = session.SessionData["username"];
+            return new ResponseData {
+                Status = ServerStatus.OK,
+                ContentType = "text",
+                Data = Encoding.ASCII.GetBytes(username)
+            };
+        }
 
         // POST -> api/login | username and password in form data
         public static ResponseData LoginHandler(Session session, Dictionary<string, string> kwargs)
@@ -39,56 +64,41 @@ namespace otavaSocket
             string username = kwargs["username"];
             string password = kwargs["password"];
             string submitButton = kwargs["operation"];
-            string Status = "";
             var user = JSONFileService.GetAll<User>().FirstOrDefault(user => user.Username == username);
             if (user != null)
             {
                 if (submitButton == "register")
                 {
-                    Status = "Username already taken!";
+                    Console.WriteLine("Username already Taken!");
                 }
                 else if (AesEncryptor.Compare(password, user))
                 {
                     //successful login, redirect user to the app
+                    Console.WriteLine("Logging in...");
                     session.Authorized = true;
                     session.SessionData.TryAdd("UserID", user.ID.ToString());
                     session.SessionData.TryAdd("Username", user.Username);
-                    var dataPacket = new JSONPacket();
-                    if (user.Icon != null)
-                    {
-                        dataPacket.Redirect = "/welcome";
-                        dataPacket.HasIcon = true;
-                    }
-                    else
-                    {
-                        dataPacket.HasIcon = false;
-                    }
-                    var ret = new ResponseData()
-                    {
-                        Data = Encoding.UTF8.GetBytes(dataPacket.ToString()),
-                        ContentType = "text/json",
+                    return new ResponseData {
                         Status = ServerStatus.OK,
-                        Encoding = Encoding.UTF8
+                        RequestedResource = "welcome.html"
                     };
-                    return ret;
-
                 }
                 else
                 {
-                    Status = "Wrong password!";
+                    Console.WriteLine("Bad password!") ;
                 }
             }
             else
             {
                 if (submitButton == "login")
                 {
-                    Status = "No such user exists!";
+                    Console.WriteLine("No such user exists");
                 }
                 else
                 {
                     if (ParseCredentials(username, password))
                     {
-                        Status = "Registered new user!";
+                        Console.WriteLine($"Registered user {username}");
                         user = new User
                         {
                             Username = username,
@@ -100,17 +110,14 @@ namespace otavaSocket
                     }
                     else
                     {
-                        Status = "Username and password cannot be empty!";
+                        Console.WriteLine("Username and Password cannot be empty");
                     }
                 }
             }
-            var dataWrapper = new JSONPacket() { Data = Status, Redirect = null, HasIcon = true };
-            return new ResponseData()
+            return new ResponseData
             {
-                ContentType = "text/json",
-                Encoding = Encoding.UTF8,
-                Data = Encoding.UTF8.GetBytes(dataWrapper.ToString()),
                 Status = ServerStatus.OK,
+                RequestedResource = "login.html"
             };
         }
 
@@ -181,7 +188,6 @@ namespace otavaSocket
                 if (session.SessionData.TryGetValue("currentRoom", out temp) && temp != id)
                 {
                         session.SessionData["currentRoom"] = id;
-                        session.MessageOffset = 0;
                 }
                 Guid ID = Guid.Parse(id);
                 ChatRoom cr = JSONFileService.GetAll<ChatRoom>().First(c => c.ID == ID);
@@ -204,13 +210,11 @@ namespace otavaSocket
             if (session.SessionData.TryGetValue("currentRoom", out currRoom))
             {
                 string messageBody = kwargs["message"];
-                string icon = kwargs["icon"];
                 Message message = new Message()
                 {
                     Sender = session.SessionData["Username"],
                     Body = messageBody,
                     TimeSent = DateTime.Now,
-                    Icon = icon
                 };
                 JSONFileService.Update(Guid.Parse(currRoom), message);
                 kwargs["id"] = currRoom;
@@ -242,6 +246,7 @@ namespace otavaSocket
             ServerStatus status = ServerStatus.UnknownType;
             if (Guid.TryParse(kwargs["id"], out RoomId)){
                 Guid UserID = Guid.Parse(session.SessionData["UserID"]);
+                Console.WriteLine($"user {UserID} joined room {RoomId}");
                 JSONFileService.Update<ChatRoom>(RoomId, UserID);
                 JSONFileService.Update<User>(UserID, RoomId);
                 status = ServerStatus.OK;
@@ -251,7 +256,7 @@ namespace otavaSocket
                 ContentType = "text/json",
                 Encoding = Encoding.UTF8,
                 Status = status,
-                Data = new byte[]{}
+                Data = Encoding.ASCII.GetBytes("[{\"join\":\"ok\"}]")
             };
         }
 
