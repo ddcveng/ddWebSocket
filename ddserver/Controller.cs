@@ -51,8 +51,7 @@ namespace otavaSocket
         }
     }
 
-    /// Concrete controller requiring the session is not expired in addition
-    /// to authorization
+    /// Concrete controller requiring the session is not expired in addition to authorization
     public class AuthorizedExpirableController : BaseController
     {
         public AuthorizedExpirableController(Handler handler) : base(handler)

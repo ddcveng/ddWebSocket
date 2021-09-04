@@ -3,13 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using otavaSocket;
 
-namespace otavaSocket
-{//TODO: make handlers async
+namespace chatApp
+{
+    /// Signature of a Handler delegate
     using Handler = Func<Session, Dictionary<string, string>, ResponseData>;
 
+    /// Hub implementation used for the example
     class ChatHub : Hub
     {
+        /**
+         * Saves the received message to file. Also creates a json object
+         * for the message and returns its serialized version for sending
+         * back to the clients
+         */
         protected override string OnReceive(string message, Session session, string senderID)
         {
             string currRoom;
@@ -29,8 +37,28 @@ namespace otavaSocket
         }
     }
 
+    /// Class housing all of the handler delegates
+    /**
+     * All of the handlers have a signature as defined on top of this file.
+     *
+     * They return a ResponseData object that can be directly sent back to
+     * the browser or it can contain a request to load some static data and send
+     * that instead.
+     *
+     * Handler parameters:
+     * - session
+     *   The session object associated with the connection
+     * - kwargs
+     *   A Dictionary containing data provided by the request as key value pairs.
+     *   This means a GET request's url query will be found here as well as
+     *   POST request's form data.
+     */
     class Handlers
     {
+        /// Helper function for routes that are just aliases to static resources
+        /**
+         * You can for example direct the route /chat/createRoom to the file createRoom.html
+         */
         public static Handler GetDefaultHandler(string requestedPage)
         {
             Handler handlerFunc = (Session s, Dictionary<string, string> kwargs) =>
@@ -41,24 +69,16 @@ namespace otavaSocket
             return handlerFunc;
         }
 
-        public static ResponseData startchat(Session session, Dictionary<string, string> kwargs)
-        {
-            Console.WriteLine($"doslo: {kwargs["user"]}");
-            session.SessionData.Add("username", kwargs["user"]);
-            return new ResponseData { Status = ServerStatus.OK, RequestedResource="chat.html"};
-        }
-
-        public static ResponseData getUserName(Session session, Dictionary<string, string> kwargs)
-        {
-            string username = session.SessionData["username"];
-            return new ResponseData {
-                Status = ServerStatus.OK,
-                ContentType = "text",
-                Data = Encoding.ASCII.GetBytes(username)
-            };
-        }
-
-        // POST -> api/login | username and password in form data
+        /// Handler function managing access to the app
+        /**
+         * POST -> api/login | username and password in form data
+         *
+         * Used on the login page. Takes the credentials the user put in
+         * and tries to either register that user or log in as that user.
+         *
+         * Result of these oprations can be seen on standard output. Nothing can be
+         * seen on the webpage because writing javascript is pain.
+         */
         public static ResponseData LoginHandler(Session session, Dictionary<string, string> kwargs)
         {
             string username = kwargs["username"];
@@ -121,12 +141,17 @@ namespace otavaSocket
             };
         }
 
-        public static bool ParseCredentials(string username, string pass)
+        private static bool ParseCredentials(string username, string pass)
         {
             return username.Length > 0 && pass.Length > 0;
         }
 
-        // GET -> api/chatinit
+        /// Handler for initializing a chatroom with data
+        /**
+         * GET -> api/chatinit
+         *
+         * Gets the chatrooms available for the current user.
+         */
         public static ResponseData InitializeChatroom(Session session, Dictionary<string, string> kwargs)
         {
             Guid userID = Guid.Parse(session.SessionData["UserID"]);
@@ -153,7 +178,13 @@ namespace otavaSocket
             };
         }
 
-        // POST -> api/createRoom | roomName in form data
+        /// Handler for creating a new chatroom in the app
+        /**
+         * POST -> api/createRoom | roomName in form data
+         *
+         * Creates a new room in the app with the name provided and returns
+         * the result of this operaion.
+         */
         public static ResponseData CreateRoom(Session session, Dictionary<string, string> kwargs)
         {
             string roomName = kwargs["roomName"];
@@ -177,7 +208,13 @@ namespace otavaSocket
             };
         }
 
-        // GET -> api/messages | id in params
+        /// Handler for getting all messsages for a given chatroom
+        /**
+         * GET -> api/messages | id in params
+         *
+         * Finds the chatroom using the id provided and returns a list of all
+         * the messages.
+         */
         public static ResponseData GetMessages(Session session, Dictionary<string, string> kwargs)
         {
             string id;
@@ -203,43 +240,15 @@ namespace otavaSocket
             return ret;
         }
 
-        // POST -> api/messages | message text and user icon in form data
-        public static ResponseData AddMessage(Session session, Dictionary<string, string> kwargs)
-        {
-            string currRoom;
-            if (session.SessionData.TryGetValue("currentRoom", out currRoom))
-            {
-                string messageBody = kwargs["message"];
-                Message message = new Message()
-                {
-                    Sender = session.SessionData["Username"],
-                    Body = messageBody,
-                    TimeSent = DateTime.Now,
-                };
-                JSONFileService.Update(Guid.Parse(currRoom), message);
-                kwargs["id"] = currRoom;
-                return GetMessages(session, kwargs);
-            }
-            return new ResponseData() { Status = ServerStatus.ServerError };
-        }
-
-
-        // GET -> api/seticon | icon in params
-        public static ResponseData SetIcon(Session session, Dictionary<string, string> kwargs)
-        {
-            string icon = kwargs["icon"];
-            JSONFileService.Update(Guid.Parse(session.SessionData["UserID"]), icon);
-            JSONPacket jp = new JSONPacket() { HasIcon = true, Redirect = "/welcome" };
-            return new ResponseData()
-            {
-                Data = Encoding.UTF8.GetBytes(jp.ToString()),
-                ContentType = "text/json",
-                Encoding = Encoding.UTF8,
-                Status = ServerStatus.OK
-            };
-        }
-
-        // GET -> api/join?id=...
+        /// Handler for adding a user to a chatroom
+        /**
+         * If a user has the ID of a chatroom, they can join via this method on
+         *
+         * GET -> api/join?id=...
+         *
+         * This method updates both the user and the chatroom with the needed references
+         * and returns a status message.
+         */
         public static ResponseData JoinRoom(Session session, Dictionary<string, string> kwargs)
         {
             Guid RoomId;
@@ -260,7 +269,12 @@ namespace otavaSocket
             };
         }
 
-        // GET -> api/getuser
+        /// Handler for getting info about the logged in user
+        /**
+         * GET -> api/getuser
+         *
+         * Provide the browser with data about the current user, excluding the password
+         */
         public static ResponseData GetCurrentUserData(Session session, Dictionary<string, string> kwargs)
         {
             Guid userID = Guid.Parse(session.SessionData["UserID"]);
@@ -275,7 +289,13 @@ namespace otavaSocket
             };
         }
 
-        // GET -> api/logout
+        /// Handler for logging out the user
+        /**
+         * GET -> api/logout
+         *
+         * Sets the user session to unauthorized
+         * and redirects the browser back to the front page
+         */
         public static ResponseData Logout(Session session, Dictionary<string, string> kwargs)
         {
             //session.Valid = false;

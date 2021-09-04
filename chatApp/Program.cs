@@ -1,6 +1,7 @@
 ﻿using System;
+using otavaSocket;
 
-namespace otavaSocket
+namespace chatApp
 {
     class Program
     {
@@ -20,7 +21,6 @@ namespace otavaSocket
             server.AddRoute(new Route { Path = "welcome", Verb = "POST", Controller = new AnonymousController(Handlers.LoginHandler), NeedsResources=true});
             server.AddRoute(new Route { Path = "api/createRoom", Verb = "POST", Controller = new AuthorizedExpirableController(Handlers.CreateRoom) });
             server.AddRoute(new Route { Path = "api/messages", Verb = "GET", Controller = new AuthorizedController(Handlers.GetMessages) });
-            server.AddRoute(new Route { Path = "api/messages", Verb = "POST", Controller = new AuthorizedController(Handlers.AddMessage) });
             server.AddRoute(new Route { Path = "api/join", Verb = "GET", Controller = new AuthorizedExpirableController(Handlers.JoinRoom) });
             server.AddRoute(new Route { Path = "api/getuser", Verb = "GET", Controller = new AuthorizedController(Handlers.GetCurrentUserData) });
             server.AddRoute(new Route { Path = "api/logout", Verb = "GET", Controller = new AuthorizedController(Handlers.Logout) });

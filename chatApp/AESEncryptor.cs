@@ -1,17 +1,25 @@
 ﻿using System;
-
 using System.Security.Cryptography;
 using System.IO;
 using System.Text;
 
 
-//not really secure but whatever ¯\_(ツ)_/¯
-namespace otavaSocket
+namespace chatApp
 {
+    /// Class used for encrypting user passwords
+    /**
+     * I needed to have some random value for each user that I can use for deterministic
+     * encryption so I can compare the passwords on login. For this I chose
+     * the time of registration, but that's stored in plaintext so if someone knows
+     * how the passwords are encrypted it doesnt make much of a difference.
+     *
+     * modfied from this example
+     * https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.aes?view=netcore-3.1
+     *
+     * not really secure but whatever ¯\_(ツ)_/¯
+     */
     public static class AesEncryptor
     {
-        //modfied from this example
-        //https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.aes?view=netcore-3.1
         public static void Encrypt(User user)
         {
             user.Password = Convert.ToBase64String(_Encrypt(user.Password, user.DateCreated));
@@ -27,7 +35,7 @@ namespace otavaSocket
             using (SHA256 mySHA256 = SHA256.Create())
             {
                 Key = mySHA256.ComputeHash(Encoding.ASCII.GetBytes(key));
-                IV256 = mySHA256.ComputeHash(Key); //toto by mozno mohlo byt dajak nezavisle, ale stale vypocitatelne
+                IV256 = mySHA256.ComputeHash(Key);
             }
 
             Array.Copy(IV256, IV128, 16);
@@ -57,6 +65,11 @@ namespace otavaSocket
             return encrypted;
         }
 
+        /// Check if the provided password matches the user's
+        /**
+         * Encrypts the provided password and compares the resulting value to
+         * the stored password
+         */
         public static bool Compare(string password, User user)
         {
             byte[] passBytes = _Encrypt(password, user.DateCreated);
