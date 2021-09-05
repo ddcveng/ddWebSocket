@@ -8,7 +8,8 @@ namespace chatApp
         /// This should be pointing to the chatApp directory
         /// in VisualStudio the CurrentDirectory is in chatApp/bin/Debug/net5.0
         /// so just go 3 folders up from that
-        public static string ProgramDir = Environment.CurrentDirectory + @"/../../..";
+        /// public static string ProgramDir = Environment.CurrentDirectory + @"/../../..";
+        public static string ProgramDir = Environment.CurrentDirectory; // use this if running from the command line
         public static string UserPath = ProgramDir+@"/Data/Users.json";
         public static string ChatRoomPath = ProgramDir+@"/Data/ChatRooms.json";
         public static string WebRootDir = ProgramDir+@"/wwwroot";
