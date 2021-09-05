@@ -38,6 +38,8 @@ namespace chatApp
         /// Add a new entry to the storage file
         /**
          * Seriealizes the object and writes it to the file
+         * To reset the file delete everything and put just [] in
+         * This function assumes the files use UNIX end of lines (just '\n')
          *
          * @param newObj The new object to add
          * @tparam T Type of the object to add, also determines location of the file
