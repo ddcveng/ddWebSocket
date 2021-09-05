@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "ID": "0dd96ab3-49eb-4d19-b5f9-f4a20b914e28",
+    "Username": "ddcveng",
+    "Password": "oJDantxFi/xFadwxDnc/KQ==",
+    "DateCreated": "5. 9. 2021 9:27:34",
+    "ChatRoomIDs": [
+      "dea6b89a-bea5-4d12-8efa-bab91d29af7e"
+    ]
+  },
+  {
+    "ID": "d03e4508-0369-40cd-950c-2b13f32b70ef",
+    "Username": "demonko",
+    "Password": "aHK/hJ6bqFVe7KYI9a0WCg==",
+    "DateCreated": "5. 9. 2021 9:28:04",
+    "ChatRoomIDs": [
+      "dea6b89a-bea5-4d12-8efa-bab91d29af7e"
+    ]
+  }
+]

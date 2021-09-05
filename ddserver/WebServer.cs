@@ -36,7 +36,7 @@ namespace otavaSocket
             _router = new Router(webRootFolder);
             _sm = new SessionManager();
             _listener = new HttpListener();
-            _listener.Prefixes.Add($"http://*:{_port}/");
+            _listener.Prefixes.Add($"http://+:{_port}/");
         }
 
         /// Register multiple routes

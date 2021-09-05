@@ -5,7 +5,7 @@ namespace chatApp
 {
     class Program
     {
-        public static string ProgramDir = Environment.CurrentDirectory;
+        public static string ProgramDir = Environment.CurrentDirectory + @"/../../..";
         public static string UserPath = ProgramDir+@"/Data/Users.json";
         public static string ChatRoomPath = ProgramDir+@"/Data/ChatRooms.json";
         public static string WebRootDir = ProgramDir+@"/wwwroot";
@@ -13,7 +13,7 @@ namespace chatApp
         public static void Main()
         {
             Session.SessionLifetime = 300;
-            WebServer server = new WebServer(WebRootDir, 5555);
+            WebServer server = new WebServer(WebRootDir, 80);
             server.UseWebSockets<ChatHub>();
 
             server.AddRoute(new Route { Path = "welcome", Verb = "GET", Controller = new AuthorizedExpirableController(Handlers.GetDefaultHandler("welcome.html")), NeedsResources=true });

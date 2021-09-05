@@ -125,11 +125,11 @@ namespace otavaSocket
                 MemoryNode messageData;
                 while (client.toSend.TryDequeue(out messageData))
                 {
-                    Console.WriteLine("dequeued message");
+                    //Console.WriteLine("dequeued message");
                     var buf = new ArraySegment<byte>(messageData.data, 0, messageData.length);
 
                     if (client.socket.State != WebSocketState.Open) {
-                        Console.WriteLine("socket was closed");
+                        //Console.WriteLine("socket was closed");
                         break;
                     }
 

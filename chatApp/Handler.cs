@@ -23,7 +23,7 @@ namespace chatApp
             string currRoom;
             if (session.SessionData.TryGetValue("currentRoom", out currRoom))
             {
-                Console.WriteLine("bol currentRoom");
+                //Console.WriteLine("bol currentRoom");
                 Message messagePacket = new Message()
                 {
                     Sender = senderID,
@@ -33,7 +33,7 @@ namespace chatApp
                 JSONFileService.Update(Guid.Parse(currRoom), messagePacket);
                 return JsonSerializer.Serialize(messagePacket);
             }
-            return "hovno";
+            return "";
         }
     }
 

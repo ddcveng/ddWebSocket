@@ -1,1 +1,22 @@
-[]
+[
+  {
+    "ID": "dea6b89a-bea5-4d12-8efa-bab91d29af7e",
+    "Name": "braskovia",
+    "UserIDs": [
+      "0dd96ab3-49eb-4d19-b5f9-f4a20b914e28",
+      "d03e4508-0369-40cd-950c-2b13f32b70ef"
+    ],
+    "Messages": [
+      {
+        "Sender": "demonko",
+        "Body": "caute vsetci",
+        "TimeSent": "2021-09-05T11:28:31.2122493+02:00"
+      },
+      {
+        "Sender": "ddcveng",
+        "Body": "cau ty",
+        "TimeSent": "2021-09-05T11:28:35.4116643+02:00"
+      }
+    ]
+  }
+]
